@@ -7,3 +7,11 @@
 
 -- API endpoints:
 - 
+backend api--
+create form -- http://localhost:8081/formflow/createForm  (post)
+get all form -- http://localhost:8081/formflow/allForm  (get)
+get form by id -- http://localhost:8081/formflow/forms/{id}  get()
+get form by status -- http://localhost:8081/formflow/forms/status/{status}
+
+post respose -- http://localhost:8081/formflow/submitForm  (post)
+get form response by formId -- http://localhost:8081/formflow/getResponse/{formId}  get()
