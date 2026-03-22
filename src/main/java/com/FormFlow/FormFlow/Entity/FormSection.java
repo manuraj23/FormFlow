@@ -1,5 +1,7 @@
 package com.FormFlow.FormFlow.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,10 +23,13 @@ public class FormSection {
     private String sectionTitle;
     private int sectionOrder;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "form_id")
+    @JsonIgnore
     private Form form;
 
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("fieldOrder ASC")
+    @JsonIgnoreProperties("section")
     private List<FormFields> fields;
 }

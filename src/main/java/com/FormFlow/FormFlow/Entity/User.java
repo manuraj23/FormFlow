@@ -1,5 +1,6 @@
 package com.FormFlow.FormFlow.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,8 +21,10 @@ public class User {
 
     private String name;
     private String email;
+
+    @JsonIgnore
     private String password;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<Form> forms;
 }

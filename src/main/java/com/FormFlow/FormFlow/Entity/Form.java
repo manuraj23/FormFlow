@@ -1,14 +1,10 @@
 package com.FormFlow.FormFlow.Entity;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.catalina.User;
 
 import java.util.List;
 
@@ -28,11 +24,13 @@ public class Form {
 
     private boolean published;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToMany(mappedBy = "form", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "form", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("sectionOrder ASC")
+    @JsonIgnoreProperties("form")
     private List<FormSection> sections;
-}
 
+}
