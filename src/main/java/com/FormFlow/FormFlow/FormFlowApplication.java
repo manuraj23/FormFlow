@@ -9,5 +9,4 @@ public class FormFlowApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(FormFlowApplication.class, args);
 	}
-
 }
