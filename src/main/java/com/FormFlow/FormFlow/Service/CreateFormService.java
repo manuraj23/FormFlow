@@ -17,14 +17,14 @@ public class CreateFormService {
 
     public String createForm(FormCreateDTO dto) {
 
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+//        User user = userRepository.findById(dto.getUserId())
+//                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Form form = new Form();
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
-        form.setUser(user);
+//        form.setUser(user);
 
         if (dto.getSections() != null) {
             form.setSections(dto.getSections().stream().map(sectionDTO -> {

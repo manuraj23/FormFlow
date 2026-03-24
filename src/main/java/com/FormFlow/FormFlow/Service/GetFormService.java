@@ -23,7 +23,7 @@ public class GetFormService {
             dto.setTitle(form.getTitle());
             dto.setDescription(form.getDescription());
             dto.setPublished(form.isPublished());
-            dto.setCreatedBy(form.getUser().getName());
+//            dto.setCreatedBy(form.getUser().getName());
 
             if (form.getSections() != null) {
                 dto.setSections(form.getSections().stream().map(section -> {
