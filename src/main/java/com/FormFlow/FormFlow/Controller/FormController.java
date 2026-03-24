@@ -10,7 +10,7 @@ import java.util.List;
 // Base path — all endpoints here start with /forms
 // combined with context path /formflow it becomes /formflow/forms
 @RequestMapping("/forms")
-@CrossOrigin(origins = "*")
+
 public class FormController {
 
     private final FormService formService;
