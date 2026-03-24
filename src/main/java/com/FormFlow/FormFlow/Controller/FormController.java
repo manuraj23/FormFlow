@@ -2,6 +2,7 @@ package com.FormFlow.FormFlow.Controller;
 
 import com.FormFlow.FormFlow.DTO.FormGetDTO;
 import com.FormFlow.FormFlow.Service.FormService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class FormController {
 
     // GET /formflow/forms/{id}
     // Returns one specific form by its ID as a FormGetDTO
+    @Operation(summary = "Get a form by its ID")
     @GetMapping("/{id}")
     public FormGetDTO getFormById(@PathVariable Long id) {
         return formService.getFormById(id);
@@ -29,6 +31,7 @@ public class FormController {
     // GET /formflow/forms/status/{status}
     // status will be "true" for published or "false" for draft
 
+    @Operation(summary = "Get forms by their published status (true for published, false for draft)")
     @GetMapping("/status/{status}")
     public List<FormGetDTO> getFormsByStatus(@PathVariable String status) {
         boolean published = status.equalsIgnoreCase("true");
