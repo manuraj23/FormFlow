@@ -1,6 +1,8 @@
 package com.FormFlow.FormFlow.DTO;
 
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -14,4 +16,5 @@ public class FormGetDTO {
     private String createdBy;
 
     private List<SectionDTO> sections;
+    private LocalDateTime createdAt;
 }

@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -33,4 +35,6 @@ public class Form {
     @JsonIgnoreProperties("form")
     private List<FormSection> sections;
 
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

@@ -24,6 +24,7 @@ public class CreateFormService {
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
+
 //        form.setUser(user);
 
         if (dto.getSections() != null) {
