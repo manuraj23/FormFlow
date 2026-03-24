@@ -1,5 +1,5 @@
 server:
-  port: 8082
+  port: 8081
   servlet:
     context-path: /formflow
 
@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/formflow
     username: postgres
-    password: suhani@123
+    password: 12345678
 
   jpa:
     hibernate:
