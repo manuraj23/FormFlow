@@ -17,8 +17,8 @@ public class SwaggerConfig {
                 new Info().title("FormFlow API")
                         .description("API documentation for FormFlow application")
         )
-                .servers(List.of(new Server().url("http://localhost:8081").description("Local server"),
-                        new Server().url("https://formflow.onrender.com").description("Production server")
+                .servers(List.of(new Server().url("http://localhost:8082/formflow").description("Local server"),
+                        new Server().url("https://formflow.onrender.com/formflow").description("Production server")
                 ));
     }
 }

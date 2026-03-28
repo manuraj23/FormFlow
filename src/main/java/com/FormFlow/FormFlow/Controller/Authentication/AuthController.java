@@ -1,5 +1,4 @@
 package com.FormFlow.FormFlow.Controller.Authentication;
-
 import com.FormFlow.FormFlow.DTO.Auth.LoginDTO;
 import com.FormFlow.FormFlow.DTO.Auth.SignUpDTO;
 import com.FormFlow.FormFlow.Service.Authentication.AuthService;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
