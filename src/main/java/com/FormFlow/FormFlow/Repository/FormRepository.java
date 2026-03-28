@@ -39,4 +39,10 @@ public interface FormRepository extends JpaRepository<Form, Long> {
 """)
     List<Form> findFormsByUsernameAndStatus(@Param("username") String username,
                                             @Param("published") boolean published);
+
+    @Query("""
+    SELECT DISTINCT f FROM Form f
+    LEFT JOIN FETCH f.sections s
+""")
+    List<Form> findAllFormsWithSections();
 }
