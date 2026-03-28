@@ -1,7 +1,10 @@
 package com.FormFlow.FormFlow.Controller.Authentication;
-import com.FormFlow.FormFlow.DTO.Auth.LoginDTO;
-import com.FormFlow.FormFlow.DTO.Auth.SignUpDTO;
+import com.FormFlow.FormFlow.DTO.Auth.*;
+import com.FormFlow.FormFlow.Entity.RefreshToken;
+import com.FormFlow.FormFlow.Entity.User;
+import com.FormFlow.FormFlow.Repository.RefreshTokenRepository;
 import com.FormFlow.FormFlow.Service.Authentication.AuthService;
+import com.FormFlow.FormFlow.Service.Authentication.RefreshTokenService;
 import com.FormFlow.FormFlow.Service.UserDetailServiceImpl;
 import com.FormFlow.FormFlow.Utils.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +39,12 @@ public class AuthController {
     @Autowired
     private JwtUtils jwtUtil;
 
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     @Operation(summary = "Register a new user")
     @PostMapping("/signup")
     public ResponseEntity<?>signup(@RequestBody SignUpDTO signUpDTO){
@@ -52,27 +61,39 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "Login and receive a JWT token")
-    @PostMapping("login")
-    public ResponseEntity<?>login(@RequestBody LoginDTO loginDTO) {
-        try {
-            String username = loginDTO.getUsername();
-            String password = loginDTO.getPassword();
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
-            UserDetails userDetails = userDetailService.loadUserByUsername(username);
-            List<String> roles = userDetails.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority).filter(Objects::nonNull)
-                    .map(authority -> authority.startsWith("ROLE_") ? authority.substring(5) : authority)
-                    .toList();
-            String jwt = jwtUtil.generateToken(userDetails.getUsername(), roles);
-            return new ResponseEntity<>(jwt, HttpStatus.OK);
-        } catch (BadCredentialsException e) {
-            return new ResponseEntity<>("Invalid username or password", HttpStatus.UNAUTHORIZED);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Invalid username or password", HttpStatus.UNAUTHORIZED);
-        }
+    @Operation(summary = "Login a registered user")
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO) {
+        return ResponseEntity.ok(authService.login(loginDTO));
+    }
 
+    @Operation(summary = "Refresh access token using a valid refresh token")
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequestDTO request) {
 
+        RefreshToken refreshToken = refreshTokenService
+                .verifyExpiration(
+                        refreshTokenRepository.findByToken(request.getRefreshToken())
+                                .orElseThrow(() -> new RuntimeException("Invalid refresh token"))
+                );
+
+        User user = refreshToken.getUser();
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+
+        return ResponseEntity.ok(new AuthResponseDTO(accessToken, refreshToken.getToken()));
+    }
+
+    @Operation(summary = "Logout a user by invalidating their refresh token")
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody LogoutDTO logoutDTO) {
+
+        RefreshToken refreshToken = refreshTokenRepository
+                .findByToken(logoutDTO.getRefreshToken())
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+
+        refreshTokenRepository.delete(refreshToken);
+
+        return ResponseEntity.ok("Logged out successfully");
     }
 
 
