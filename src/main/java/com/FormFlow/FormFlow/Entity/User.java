@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -31,6 +33,6 @@ public class User {
     @Column(name = "role")
     private List<String> roles;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private List<Form> forms;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Form> forms = new ArrayList<>();
 }

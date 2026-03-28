@@ -4,10 +4,13 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.FormFields;
 import com.FormFlow.FormFlow.Entity.FormSection;
+import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Repository.FormRepository;
 import com.FormFlow.FormFlow.Repository.UserRepository;
 import com.FormFlow.FormFlow.enums.FieldType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,16 +21,19 @@ public class CreateFormService {
     private final UserRepository userRepository;
 
     public String createForm(FormCreateDTO dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
 
-//        User user = userRepository.findById(dto.getUserId())
-//                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByUsername(username);
 
         Form form = new Form();
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
 
-//        form.setUser(user);
+        // Set relationship
+        form.setUser(user);
+        user.getForms().add(form);
 
         if (dto.getSections() != null) {
             form.setSections(dto.getSections().stream().map(sectionDTO -> {
