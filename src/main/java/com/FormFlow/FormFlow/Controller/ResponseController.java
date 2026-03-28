@@ -1,6 +1,6 @@
 package com.FormFlow.FormFlow.Controller;
 
-import com.FormFlow.FormFlow.DTO.FormResponseDTO;
+import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
 import com.FormFlow.FormFlow.Service.ResponseService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;

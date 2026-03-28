@@ -1,6 +1,7 @@
-package com.FormFlow.FormFlow.DTO;
+package com.FormFlow.FormFlow.DTO.FormDetails;
 
 import lombok.Data;
+
 import java.util.Map;
 
 @Data

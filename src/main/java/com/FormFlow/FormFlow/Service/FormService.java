@@ -1,8 +1,8 @@
 package com.FormFlow.FormFlow.Service;
 
-import com.FormFlow.FormFlow.DTO.FieldDTO;
-import com.FormFlow.FormFlow.DTO.FormGetDTO;
-import com.FormFlow.FormFlow.DTO.SectionDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.FieldDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
 import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.FormFields;
 import com.FormFlow.FormFlow.Entity.FormSection;
@@ -57,7 +57,7 @@ public class FormService {
 
         // Gets the name of the user who created the form
         // null check in case user is not set
-        dto.setCreatedBy(form.getUser() != null ? form.getUser().getName() : null);
+//        dto.setCreatedBy(form.getUser() != null ? form.getUser().getName() : null);
 
         dto.setSections(
                 form.getSections()

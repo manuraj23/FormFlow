@@ -1,6 +1,7 @@
-package com.FormFlow.FormFlow.DTO;
+package com.FormFlow.FormFlow.DTO.Response;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 

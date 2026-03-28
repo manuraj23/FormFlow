@@ -1,6 +1,6 @@
 package com.FormFlow.FormFlow.Service;
 
-import com.FormFlow.FormFlow.DTO.FormResponseDTO;
+import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
 import com.FormFlow.FormFlow.Entity.FormResponse;
 import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 import org.springframework.stereotype.Service;

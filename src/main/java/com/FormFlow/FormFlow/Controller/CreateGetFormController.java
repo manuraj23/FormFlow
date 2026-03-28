@@ -1,7 +1,7 @@
 package com.FormFlow.FormFlow.Controller;
 
-import com.FormFlow.FormFlow.DTO.FormCreateDTO;
-import com.FormFlow.FormFlow.DTO.FormGetDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.Service.CreateFormService;
 import com.FormFlow.FormFlow.Service.GetFormService;
 import io.swagger.v3.oas.annotations.Operation;

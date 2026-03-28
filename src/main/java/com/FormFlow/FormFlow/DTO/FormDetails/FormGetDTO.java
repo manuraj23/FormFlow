@@ -1,5 +1,6 @@
-package com.FormFlow.FormFlow.DTO;
+package com.FormFlow.FormFlow.DTO.FormDetails;
 
+import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
