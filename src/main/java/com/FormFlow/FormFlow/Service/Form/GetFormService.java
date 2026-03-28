@@ -1,4 +1,4 @@
-package com.FormFlow.FormFlow.Service;
+package com.FormFlow.FormFlow.Service.Form;
 
 import com.FormFlow.FormFlow.DTO.FormDetails.FieldDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;

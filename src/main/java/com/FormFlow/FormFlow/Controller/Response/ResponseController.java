@@ -1,10 +1,9 @@
-package com.FormFlow.FormFlow.Controller;
+package com.FormFlow.FormFlow.Controller.Response;
 
 import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
-import com.FormFlow.FormFlow.Service.ResponseService;
+import com.FormFlow.FormFlow.Service.Response.ResponseService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController

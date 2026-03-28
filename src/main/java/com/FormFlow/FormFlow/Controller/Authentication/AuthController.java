@@ -1,8 +1,8 @@
-package com.FormFlow.FormFlow.Controller;
+package com.FormFlow.FormFlow.Controller.Authentication;
 
 import com.FormFlow.FormFlow.DTO.Auth.LoginDTO;
 import com.FormFlow.FormFlow.DTO.Auth.SignUpDTO;
-import com.FormFlow.FormFlow.Service.AuthService;
+import com.FormFlow.FormFlow.Service.Authentication.AuthService;
 import com.FormFlow.FormFlow.Service.UserDetailServiceImpl;
 import com.FormFlow.FormFlow.Utils.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;

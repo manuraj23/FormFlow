@@ -1,9 +1,9 @@
-package com.FormFlow.FormFlow.Controller;
+package com.FormFlow.FormFlow.Controller.Form;
 
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
-import com.FormFlow.FormFlow.Service.CreateFormService;
-import com.FormFlow.FormFlow.Service.GetFormService;
+import com.FormFlow.FormFlow.Service.Form.CreateFormService;
+import com.FormFlow.FormFlow.Service.Form.GetFormService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
