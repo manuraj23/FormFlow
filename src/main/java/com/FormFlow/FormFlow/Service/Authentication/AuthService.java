@@ -5,7 +5,6 @@ import com.FormFlow.FormFlow.DTO.Auth.SignUpDTO;
 import com.FormFlow.FormFlow.Entity.RefreshToken;
 import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Repository.UserRepository;
-import com.FormFlow.FormFlow.Service.UserDetailServiceImpl;
 import com.FormFlow.FormFlow.Utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,9 +21,6 @@ public class AuthService {
 
     @Autowired
     private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private UserDetailServiceImpl userDetailService;
 
     @Autowired
     private JwtUtils jwtUtil;

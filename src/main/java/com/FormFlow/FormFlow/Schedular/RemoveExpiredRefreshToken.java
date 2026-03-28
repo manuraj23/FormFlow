@@ -13,9 +13,7 @@ public class RemoveExpiredRefreshToken {
 
     @Scheduled(cron = "0 */10 * * * *")
     public void removeExpiredTokens() {
-
         refreshTokenRepository.deleteByExpiryDateBefore(Instant.now());
-
         System.out.println("Expired refresh tokens removed at: " + Instant.now());
     }
 }
