@@ -28,7 +28,7 @@ public class FormSection {
     @JsonIgnore
     private Form form;
 
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("fieldOrder ASC")
     @JsonIgnoreProperties("section")
     private List<FormFields> fields;

@@ -157,4 +157,46 @@ public class UserService {
 
         return dto;
     }
+
+//    @Transactional
+//    public void updateForm(Long formId, FormCreateDTO dto, String username) {
+//
+//        Form form = formRepository.findFormByIdAndUsername(formId, username)
+//                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+//
+//        // Update basic fields
+//        form.setTitle(dto.getTitle());
+//        form.setDescription(dto.getDescription());
+//        form.setPublished(dto.isPublished());
+//
+//        // Remove old sections & fields
+//        form.getSections().clear();
+//
+//        if (dto.getSections() != null) {
+//            List<FormSection> sections = dto.getSections().stream().map(sectionDTO -> {
+//
+//                FormSection section = new FormSection();
+//                section.setSectionTitle(sectionDTO.getSectionTitle());
+//                section.setSectionOrder(sectionDTO.getSectionOrder());
+//                section.setForm(form);
+//
+//                if (sectionDTO.getFields() != null) {
+//                    List<FormFields> fields = sectionDTO.getFields().stream().map(fieldDTO -> {
+//                        FormFields field = new FormFields();
+//                        field.setFieldType(
+//                                FieldType.valueOf(fieldDTO.getFieldType().toUpperCase())
+//                        );
+//                        field.setFieldOrder(fieldDTO.getFieldOrder());
+//                        field.setFieldConfig(fieldDTO.getFieldConfig());
+//                        field.setSection(section);
+//                        return field;
+//                    }).toList();
+//                    section.setFields(fields);
+//                }
+//                return section;
+//            }).toList();
+//            form.setSections(sections);
+//        }
+//        formRepository.save(form);
+//    }
 }

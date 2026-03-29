@@ -30,7 +30,7 @@ public class Form {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToMany(mappedBy = "form", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "form", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("sectionOrder ASC")
     @JsonIgnoreProperties("form")
     private List<FormSection> sections;

@@ -64,4 +64,13 @@ public class UserController {
         return userService.getFormsByStatus(username,status);
     }
 
+//    @Operation(summary = "Update a form by ID")
+//    @PutMapping("/form/{id}")
+//    public ResponseEntity<?> updateForm(@PathVariable Long id,@RequestBody FormCreateDTO dto) {
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        String username = authentication.getName();
+//        userService.updateForm(id, dto, username);
+//        return new ResponseEntity<>("Form Updated Successfully", HttpStatus.OK);
+//    }
+
 }
