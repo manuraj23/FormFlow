@@ -48,6 +48,13 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "Get forms by their published status (true for published, false for draft)")
+    @GetMapping("/status/{status}")
+    public List<FormGetDTO> getFormsByStatus(@PathVariable String status) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return userService.getFormsByStatus(username,status);
+    }
 
 
 //    @Operation(summary = "Update a form by ID")
