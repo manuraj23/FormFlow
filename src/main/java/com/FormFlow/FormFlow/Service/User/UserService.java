@@ -90,41 +90,7 @@ public class UserService {
         return forms.stream().map(this::convertToDTO).toList();
     }
 
-    @Transactional(readOnly = true)
-    public FormGetDTO getFormById(String username, Long id) {
 
-        Form form = formRepository.findFormByIdAndUsername(id, username)
-                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
-
-        // Load nested fields in a second query to avoid fetching multiple bag collections together.
-        formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
-
-        return convertToDTO(form);
-    }
-
-    @Transactional(readOnly = true)
-    public List<FormGetDTO> getFormsByStatus(String username, String status) {
-        boolean published;
-        if (status.equalsIgnoreCase("published")) {
-            published = true;
-        } else if (status.equalsIgnoreCase("draft")) {
-            published = false;
-        } else {
-            throw new RuntimeException("Status must be 'published' or 'draft'");
-        }
-        List<Form> forms = formRepository.findFormsByUsernameAndStatus(username, published);
-        if (forms.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Long> formIds = forms.stream().map(Form::getId).toList();
-        // Load nested fields with a dedicated query to avoid multiple bag fetch.
-        formSectionRepository.findByFormIdInWithFields(formIds);
-
-        return forms.stream()
-                .map(this::convertToDTO)
-                .toList();
-    }
 
     private FormGetDTO convertToDTO(Form form) {
         FormGetDTO dto = new FormGetDTO();

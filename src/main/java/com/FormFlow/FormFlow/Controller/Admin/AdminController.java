@@ -16,21 +16,6 @@ import java.util.List;
 @RequestMapping("/admin")
 public class AdminController {
 
-    @Autowired
-    private AdminService adminService;
 
-    @Operation(summary = "Get All Users")
-    @GetMapping("/getAllUsers")
-    public ResponseEntity<List<UserDTO>> getAllUsers() {
-        List<UserDTO> users = adminService.getAllUsers();
-        return new ResponseEntity<>(users, HttpStatus.OK);
-    }
-
-    @Operation(summary = "Get All Forms")
-    @GetMapping("/getAllForms")
-    public ResponseEntity<List<FormGetDTO>> getAllForms() {
-        List<FormGetDTO> forms = adminService.getAllForms();
-        return new ResponseEntity<>(forms, HttpStatus.OK);
-    }
 
 }

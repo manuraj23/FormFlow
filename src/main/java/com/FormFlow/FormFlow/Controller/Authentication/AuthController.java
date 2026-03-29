@@ -53,32 +53,5 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(loginDTO));
     }
 
-    @Operation(summary = "Refresh access token using a valid refresh token")
-    @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequestDTO request) {
 
-        RefreshToken refreshToken = refreshTokenService
-                .verifyExpiration(
-                        refreshTokenRepository.findByToken(request.getRefreshToken())
-                                .orElseThrow(() -> new RuntimeException("Invalid refresh token"))
-                );
-
-        User user = refreshToken.getUser();
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
-
-        return ResponseEntity.ok(new AuthResponseDTO(accessToken, refreshToken.getToken()));
-    }
-
-    @Operation(summary = "Logout a user by invalidating their refresh token")
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody LogoutDTO logoutDTO) {
-
-        RefreshToken refreshToken = refreshTokenRepository
-                .findByToken(logoutDTO.getRefreshToken())
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
-
-        refreshTokenRepository.delete(refreshToken);
-
-        return ResponseEntity.ok("Logged out successfully");
-    }
 }

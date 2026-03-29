@@ -11,29 +11,5 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
 
-    private final long refreshTokenDurationMs = 7 * 24 * 60 * 60 * 1000;
-
-    public RefreshToken createRefreshToken(User user) {
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
-        refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
-
-        return refreshTokenRepository.save(refreshToken);
-    }
-
-    public RefreshToken verifyExpiration(RefreshToken token) {
-        if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
-            refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token expired");
-        }
-        return token;
-    }
-
-    public void deleteByUserId(Long userId) {
-        refreshTokenRepository.deleteByUser_UserId(userId);
-    }
 }

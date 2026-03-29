@@ -48,21 +48,7 @@ public class UserController {
         }
     }
 
-    @Operation(summary = "Get a form by its ID")
-    @GetMapping("/form/{id}")
-    public FormGetDTO getFormById(@PathVariable Long id){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userService.getFormById(username,id);
-    }
 
-    @Operation(summary = "Get forms by their published status (true for published, false for draft)")
-    @GetMapping("/status/{status}")
-    public List<FormGetDTO> getFormsByStatus(@PathVariable String status) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userService.getFormsByStatus(username,status);
-    }
 
 //    @Operation(summary = "Update a form by ID")
 //    @PutMapping("/form/{id}")
