@@ -45,7 +45,26 @@ public class AuthService {
 
         userRepository.save(user);
     }
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
+    public AuthResponseDTO login(LoginDTO loginDTO) {
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginDTO.getUsername(),
+                        loginDTO.getPassword()
+                )
+        );
+
+        User user = userRepository.findByUsername(loginDTO.getUsername());
+
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new AuthResponseDTO(accessToken, refreshToken.getToken());
+    }
 
 
 

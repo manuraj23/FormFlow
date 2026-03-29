@@ -123,6 +123,29 @@ public class UserService {
 
         return dto;
     }
+    @Transactional(readOnly = true)
+    public List<FormGetDTO> getFormsByStatus(String username, String status) {
+        boolean published;
+        if (status.equalsIgnoreCase("published")) {
+            published = true;
+        } else if (status.equalsIgnoreCase("draft")) {
+            published = false;
+        } else {
+            throw new RuntimeException("Status must be 'published' or 'draft'");
+        }
+        List<Form> forms = formRepository.findFormsByUsernameAndStatus(username, published);
+        if (forms.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        // Load nested fields with a dedicated query to avoid multiple bag fetch.
+        formSectionRepository.findByFormIdInWithFields(formIds);
+
+        return forms.stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
 
 //    @Transactional
 //    public void updateForm(Long formId, FormCreateDTO dto, String username) {
