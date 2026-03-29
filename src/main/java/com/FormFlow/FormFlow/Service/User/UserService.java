@@ -90,6 +90,18 @@ public class UserService {
         return forms.stream().map(this::convertToDTO).toList();
     }
 
+    @Transactional(readOnly = true)
+    public FormGetDTO getFormById(String username, Long id) {
+
+        Form form = formRepository.findFormByIdAndUsername(id, username)
+                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+
+        // Load nested fields in a second query to avoid fetching multiple bag collections together.
+        formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
+
+        return convertToDTO(form);
+    }
+
 
 
     private FormGetDTO convertToDTO(Form form) {

@@ -56,6 +56,15 @@ public class UserController {
         return userService.getFormsByStatus(username,status);
     }
 
+    @Operation(summary = "Get a form by its ID")
+    @GetMapping("/form/{id}")
+    public FormGetDTO getFormById(@PathVariable Long id){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return userService.getFormById(username,id);
+    }
+
+
 
 //    @Operation(summary = "Update a form by ID")
 //    @PutMapping("/form/{id}")
