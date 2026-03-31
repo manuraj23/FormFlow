@@ -56,7 +56,7 @@ CREATE TABLE form_responses (
 -- Refresh tokens table matching RefreshToken entity
 -- expiry_date is TIMESTAMP matching Instant expiryDate
 -- user_id is FK to users table matching @ManyToOne User user
-CREATE TABLE refresh_tokens (
+CREATE TABLE refresh_token (
                                 id BIGSERIAL PRIMARY KEY,
                                 token VARCHAR(255),
                                 expiry_date TIMESTAMP,

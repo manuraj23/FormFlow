@@ -33,8 +33,8 @@ public class SpringSecurity {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/**", "/healthCheck","/swagger-ui/**","/swagger-ui.html","/v3/api-docs/**").permitAll()
-                        .requestMatchers("/createForm", "/allForm", "/forms/**", "/api/responses/**").authenticated()
+                        .requestMatchers("/auth/**","/swagger-ui/**","/swagger-ui.html","/v3/api-docs/**","/api/responses/**","/public/**").permitAll()
+//                        .requestMatchers("/createForm", "/allForm", "/forms/**", "/api/responses/**").authenticated()
                         .requestMatchers("/user/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()
@@ -47,7 +47,7 @@ public class SpringSecurity {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT","PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
 
