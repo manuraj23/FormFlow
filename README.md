@@ -18,8 +18,13 @@
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
 - create form -- http://localhost:8082/formflow/user/createForm  (post)
 - get all form -- http://localhost:8082/formflow/user/allForm  (get)
-- get form by id -- http://localhost:8082/formflow/forms/{id}  get() id is form id
+- get form by id -- http://localhost:8082/formflow/forms/{id}  get() id is form-id
 - get form by status -- http://localhost:8082/formflow/user/status/{status}  status is form status (eg: published, draft)
+- update form -- http://localhost:8082/formflow/user/updateForm/{id}  (put) id is form id
+- moveToTrash form -- http://localhost:8082/formflow/user/form/moveToTrash/{id}  (patch) id is form-id
+- get all trash form -- http://localhost:8082/formflow/user/form/trash  (get)
+- restore form from trash -- http://localhost:8082/formflow/user/form/restoreFromTrash/{id}  (patch) id is form-id
+- update form Details by id -- http://localhost:8082/formflow/user/updateForm/{id}  (put) id is form-id
 
 ### Admin APIs--
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
