@@ -33,5 +33,5 @@
 
 ### Response APIs--
 #### not authenticated -- anyone can access these APIs without authentication
-- post respose -- http://localhost:8082/formflow/submitForm  (post)
-- get form response by formId -- http://localhost:8082/formflow/getResponse/{formId}  get()
+- post respose -- http://localhost:8082/formflow/api/responses  (post)
+- get form response by formId -- http://localhost:8082/formflow/api/responsesget/{formId} (get)
