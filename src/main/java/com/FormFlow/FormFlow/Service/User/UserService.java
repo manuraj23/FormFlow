@@ -39,6 +39,7 @@ public class UserService {
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
+        form.setDeleted(false);
         form.setUser(user);
 
         if (dto.getSections() != null) {
@@ -80,6 +81,9 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<FormGetDTO> getAllForms(String username) {
         List<Form>forms = formRepository.findFormsByUsernameWithSections(username);
+
+        forms = forms.stream().filter(form -> !form.isDeleted()).toList();
+        
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
@@ -96,12 +100,14 @@ public class UserService {
         Form form = formRepository.findFormByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
 
-        // Load nested fields in a second query to avoid fetching multiple bag collections together.
+        if(form.isDeleted()) {
+            throw new RuntimeException("Form not found or not authorized");
+        }
+
         formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
 
         return convertToDTO(form);
     }
-
 
 
     private FormGetDTO convertToDTO(Form form) {
@@ -135,6 +141,7 @@ public class UserService {
 
         return dto;
     }
+
     @Transactional(readOnly = true)
     public List<FormGetDTO> getFormsByStatus(String username, String status) {
         boolean published;
@@ -146,18 +153,57 @@ public class UserService {
             throw new RuntimeException("Status must be 'published' or 'draft'");
         }
         List<Form> forms = formRepository.findFormsByUsernameAndStatus(username, published);
+        forms = forms.stream().filter(form -> !form.isDeleted()).toList();
+
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Long> formIds = forms.stream().map(Form::getId).toList();
-        // Load nested fields with a dedicated query to avoid multiple bag fetch.
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return forms.stream()
                 .map(this::convertToDTO)
                 .toList();
     }
+
+    public void softDeleteForm(String username, Long id) {
+        Form form = formRepository.findFormByIdAndUsername(id, username)
+                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+        if (form.isDeleted()) {
+            return;
+        }
+        form.setDeleted(true);
+        formRepository.save(form);
+    }
+
+    public List<FormGetDTO> getTrashedForms(String username) {
+        List<Form>forms = formRepository.findFormsByUsernameWithSections(username);
+
+        forms = forms.stream().filter(Form::isDeleted).toList();
+
+        if (forms.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        formSectionRepository.findByFormIdInWithFields(formIds);
+
+        return forms.stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+
+    public void restoreDeletedForm(String username, Long id) {
+        Form form = formRepository.findFormByIdAndUsername(id, username)
+                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+        if (!form.isDeleted()) {
+            return;
+        }
+        form.setDeleted(false);
+        formRepository.save(form);
+    }
+
 
 //    @Transactional
 //    public void updateForm(Long formId, FormCreateDTO dto, String username) {

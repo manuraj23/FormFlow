@@ -64,6 +64,36 @@ public class UserController {
         return userService.getFormById(username,id);
     }
 
+    @Operation(summary = "Move to Trash by form id")
+    @PatchMapping("/form/moveToTrash/{id}")
+    public ResponseEntity<?> softDeleteForm(@PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        userService.softDeleteForm(username, id);
+        return ResponseEntity.ok("Form Moved to Trash successfully");
+    }
+
+    @Operation(summary = "Get All Forms in Trash")
+    @GetMapping("/form/trash")
+    public ResponseEntity<List<FormGetDTO>> getTrashedForms() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        List<FormGetDTO> trashedForms = userService.getTrashedForms(username);
+        if (trashedForms != null && !trashedForms.isEmpty()) {
+            return new ResponseEntity<>(trashedForms, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Operation(summary = "Restore deleted form from Trash by form id")
+    @PatchMapping("/form/restoreFromTrash/{id}")
+    public ResponseEntity<?> restoreDeletedForm(@PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        userService.restoreDeletedForm(username, id);
+        return ResponseEntity.ok("Form Recovered from Trash successfully");
+    }
 
 
 //    @Operation(summary = "Update a form by ID")
