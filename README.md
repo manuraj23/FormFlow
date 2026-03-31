@@ -26,6 +26,9 @@
 - restore form from trash -- http://localhost:8082/formflow/user/form/restoreFromTrash/{id}  (patch) id is form-id
 - update form Details by id -- http://localhost:8082/formflow/user/updateForm/{id}  (put) id is form-id
 
+### public APIs--for form Data
+- get form by id -- http://localhost:8082/formflow/public/form/{id}  (get) id is form-id
+
 ### Admin APIs--
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
 - get all form -- http://localhost:8082/formflow/admin/getAllForms  (get)
