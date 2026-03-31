@@ -3,8 +3,7 @@ package com.FormFlow.FormFlow.enums;
 public enum FieldType {
     TEXT,
     TEXTAREA,
-    NUMBER,
-    EMAIL,
+   // NUMBER,
     PHONE,
     DATE,
     TIME,
