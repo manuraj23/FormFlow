@@ -4,10 +4,7 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FieldDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
-import com.FormFlow.FormFlow.Entity.Form;
-import com.FormFlow.FormFlow.Entity.FormFields;
-import com.FormFlow.FormFlow.Entity.FormSection;
-import com.FormFlow.FormFlow.Entity.User;
+import com.FormFlow.FormFlow.Entity.*;
 import com.FormFlow.FormFlow.Repository.FormRepository;
 import com.FormFlow.FormFlow.Repository.FormSectionRepository;
 import com.FormFlow.FormFlow.Repository.UserRepository;
@@ -15,7 +12,9 @@ import com.FormFlow.FormFlow.enums.FieldType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,10 +30,12 @@ public class UserService {
     @Autowired
     public FormSectionRepository formSectionRepository;
 
+    @Autowired
+    private FormResponseRepository formResponseRepository;
+
     public void createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
-
         Form form = new Form();
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
@@ -89,7 +90,76 @@ public class UserService {
 
         return forms.stream().map(this::convertToDTO).toList();
     }
+    @Transactional
+    public boolean updateForm(Long formId, FormCreateDTO dto, String username) {
 
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found with id: " + formId));
+
+        if (!form.getUser().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized to update this form");
+        }
+
+        List<FormResponse> responses = formResponseRepository.findByFormId(formId);
+        if (responses != null && !responses.isEmpty()) {
+            return false; // Version control required
+        }
+
+        if (dto.getSections() == null || dto.getSections().isEmpty()) {
+            throw new RuntimeException("Form must contain at least one section");
+        }
+
+        form.setTitle(dto.getTitle() != null ? dto.getTitle() : form.getTitle());
+        form.setDescription(dto.getDescription() != null ? dto.getDescription() : form.getDescription());
+        form.setPublished(dto.isPublished());
+
+        if (form.getSections() != null) {
+            form.getSections().clear(); // Hibernate tracks these as orphans now
+        } else {
+            form.setSections(new ArrayList<>());
+        }
+
+        for (SectionDTO sectionDTO : dto.getSections()) {
+            if (sectionDTO.getFields() == null || sectionDTO.getFields().isEmpty()) {
+                throw new RuntimeException("Section '" + sectionDTO.getSectionTitle() + "' must have at least one field");
+            }
+
+            FormSection section = new FormSection();
+            section.setSectionTitle(sectionDTO.getSectionTitle());
+            section.setSectionOrder(sectionDTO.getSectionOrder());
+            section.setForm(form);
+
+            List<FormFields> fields = new ArrayList<>();
+            for (FieldDTO fieldDTO : sectionDTO.getFields()) {
+                FormFields field = new FormFields();
+                try {
+                    field.setFieldType(FieldType.valueOf(fieldDTO.getFieldType().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException(
+                            "Invalid field type '" + fieldDTO.getFieldType() +
+                                    "' in section '" + sectionDTO.getSectionTitle() + "'"
+                    );
+                }
+                field.setFieldOrder(fieldDTO.getFieldOrder());
+                field.setFieldConfig(fieldDTO.getFieldConfig() != null ? fieldDTO.getFieldConfig() : Collections.emptyMap());
+                field.setSection(section);
+                fields.add(field);
+            }
+
+            section.setFields(fields);
+
+            form.getSections().add(section); // Add to existing mutable list
+        }
+
+        try {
+            formRepository.saveAndFlush(form);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to save form: " + e.getMessage(), e);
+        }
+
+        return true;
+    }
     @Transactional(readOnly = true)
     public FormGetDTO getFormById(String username, Long id) {
 

@@ -65,14 +65,21 @@ public class UserController {
     }
 
 
-
-//    @Operation(summary = "Update a form by ID")
-//    @PutMapping("/form/{id}")
-//    public ResponseEntity<?> updateForm(@PathVariable Long id,@RequestBody FormCreateDTO dto) {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String username = authentication.getName();
-//        userService.updateForm(id, dto, username);
-//        return new ResponseEntity<>("Form Updated Successfully", HttpStatus.OK);
-//    }
+    @Operation(summary = "Update a form by ID (if no responses exist)")
+    @PutMapping("/updateForm/{id}")
+    public ResponseEntity<?> updateForm(@PathVariable Long id, @RequestBody FormCreateDTO dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        try {
+            boolean updated = userService.updateForm(id, dto, username);
+            if (updated) {
+                return new ResponseEntity<>("Form Updated Successfully", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Version control is remaining", HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error Updating Form: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
 
 }
