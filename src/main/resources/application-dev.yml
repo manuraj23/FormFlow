@@ -5,7 +5,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/formflow1
+    url: jdbc:postgresql://localhost:5432/formflow
     username: postgres
     password: 12345678
 
