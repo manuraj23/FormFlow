@@ -17,6 +17,7 @@ import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -89,13 +90,13 @@ public class UserService {
             return Collections.emptyList();
         }
 
-        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        List<UUID> formIds = forms.stream().map(Form::getId).toList();
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return forms.stream().map(this::convertToDTO).toList();
     }
     @Transactional
-    public boolean updateForm(Long formId, FormCreateDTO dto, String username) {
+    public boolean updateForm(UUID formId, FormCreateDTO dto, String username) {
 
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found with id: " + formId));
@@ -165,7 +166,7 @@ public class UserService {
         return true;
     }
     @Transactional(readOnly = true)
-    public FormGetDTO getFormById(String username, Long id) {
+    public FormGetDTO getFormById(String username, UUID id) {
 
         Form form = formRepository.findFormByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
@@ -229,7 +230,7 @@ public class UserService {
             return Collections.emptyList();
         }
 
-        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        List<UUID> formIds = forms.stream().map(Form::getId).toList();
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return forms.stream()
@@ -237,7 +238,7 @@ public class UserService {
                 .toList();
     }
 
-    public void softDeleteForm(String username, Long id) {
+    public void softDeleteForm(String username, UUID id) {
         Form form = formRepository.findFormByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
         if (form.isDeleted()) {
@@ -256,7 +257,7 @@ public class UserService {
             return Collections.emptyList();
         }
 
-        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        List<UUID> formIds = forms.stream().map(Form::getId).toList();
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return forms.stream()
@@ -264,7 +265,7 @@ public class UserService {
                 .toList();
     }
 
-    public void restoreDeletedForm(String username, Long id) {
+    public void restoreDeletedForm(String username, UUID id) {
         Form form = formRepository.findFormByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
         if (!form.isDeleted()) {

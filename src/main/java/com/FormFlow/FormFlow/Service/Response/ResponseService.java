@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -120,7 +121,7 @@ public class ResponseService {
     }
 
     // validates all submitted response values against field validations
-    private void validateResponse(Long formId,
+    private void validateResponse(UUID formId,
                                   Map<String, Object> submittedResponse,
                                   List<MultipartFile> files) {
 
@@ -367,7 +368,7 @@ public class ResponseService {
         }
     }
 
-    public List<FormResponseDTO> getResponses(Long formId) {
+    public List<FormResponseDTO> getResponses(UUID formId) {
         return repository.findByFormId(formId)
                 .stream()
                 .map(this::mapToDTO)

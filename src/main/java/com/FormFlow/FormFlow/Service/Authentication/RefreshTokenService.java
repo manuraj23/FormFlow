@@ -33,7 +33,7 @@ public class RefreshTokenService {
         return token;
     }
 
-    public void deleteByUserId(Long userId) {
+    public void deleteByUserId(UUID userId) {
         refreshTokenRepository.deleteByUser_UserId(userId);
     }
 }

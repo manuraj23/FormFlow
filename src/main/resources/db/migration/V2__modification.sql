@@ -1,1 +1,0 @@
-ALTER TABLE forms ADD COLUMN is_deleted BOOLEAN DEFAULT false;

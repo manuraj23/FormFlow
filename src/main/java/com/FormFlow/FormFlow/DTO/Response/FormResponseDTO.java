@@ -4,12 +4,13 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @Data
 public class FormResponseDTO {
 
-    private Long responseId;
-    private Long formId;
+    private UUID responseId;
+    private UUID formId;
     private Map<String, Object> response;
     private LocalDateTime submittedAt;
 }

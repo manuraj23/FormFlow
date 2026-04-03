@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/responses")
@@ -45,7 +46,7 @@ public class ResponseController {
 
     @Operation(summary = "Get all responses for a specific form by its ID")
     @GetMapping("/{formId}")
-    public List<FormResponseDTO> getResponses(@PathVariable Long formId) {
+    public List<FormResponseDTO> getResponses(@PathVariable UUID formId) {
         return service.getResponses(formId);
     }
 

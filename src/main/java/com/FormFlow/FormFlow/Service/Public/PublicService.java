@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class PublicService {
@@ -22,7 +23,7 @@ public class PublicService {
     public FormSectionRepository formSectionRepository;
 
     @Transactional(readOnly = true)
-    public FormGetDTO getFormById(Long id) {
+    public FormGetDTO getFormById(UUID id) {
 
         Form form = formRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));

@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/user")
@@ -28,7 +29,7 @@ public class UserController {
             userService.createForm(dto, username);
             return new ResponseEntity<>("Form Created Successfully", HttpStatus.CREATED);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error Creating Form", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Error Creating Form: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -58,7 +59,7 @@ public class UserController {
 
     @Operation(summary = "Get a form by its ID")
     @GetMapping("/form/{id}")
-    public FormGetDTO getFormById(@PathVariable Long id){
+    public FormGetDTO getFormById(@PathVariable UUID id){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         return userService.getFormById(username,id);
@@ -66,7 +67,7 @@ public class UserController {
 
     @Operation(summary = "Move to Trash by form id")
     @PatchMapping("/form/moveToTrash/{id}")
-    public ResponseEntity<?> softDeleteForm(@PathVariable Long id) {
+    public ResponseEntity<?> softDeleteForm(@PathVariable UUID id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         userService.softDeleteForm(username, id);
@@ -88,7 +89,7 @@ public class UserController {
 
     @Operation(summary = "Restore deleted form from Trash by form id")
     @PatchMapping("/form/restoreFromTrash/{id}")
-    public ResponseEntity<?> restoreDeletedForm(@PathVariable Long id) {
+    public ResponseEntity<?> restoreDeletedForm(@PathVariable UUID id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         userService.restoreDeletedForm(username, id);
@@ -97,7 +98,7 @@ public class UserController {
 
     @Operation(summary = "Update a form by ID (if no responses exist)")
     @PutMapping("/updateForm/{id}")
-    public ResponseEntity<?> updateForm(@PathVariable Long id, @RequestBody FormCreateDTO dto) {
+    public ResponseEntity<?> updateForm(@PathVariable UUID id, @RequestBody FormCreateDTO dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         try {

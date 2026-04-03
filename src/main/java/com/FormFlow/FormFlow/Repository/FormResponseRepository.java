@@ -5,13 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface FormResponseRepository extends JpaRepository<FormResponse, Long> {
+public interface FormResponseRepository extends JpaRepository<FormResponse, UUID> {
 
-    List<FormResponse> findByFormId(Long formId);
+    List<FormResponse> findByFormId(UUID formId);
 
     @Query(value = "SELECT * FROM form_responses WHERE response ->> 'Email' = :email", nativeQuery = true)
     List<FormResponse> findByEmail(String email);
 
-    boolean existsByFormId(Long formId);
+    boolean existsByFormId(UUID formId);
 }

@@ -8,9 +8,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface FormRepository extends JpaRepository<Form, Long> {
+public interface FormRepository extends JpaRepository<Form, UUID> {
 
     // finds all forms where published = true or false
     // Spring Data JPA reads this method name and builds the query automatically
@@ -28,7 +29,7 @@ public interface FormRepository extends JpaRepository<Form, Long> {
     LEFT JOIN FETCH f.sections s
     WHERE f.id = :id AND f.user.username = :username
 """)
-    Optional<Form> findFormByIdAndUsername(@Param("id") Long id,
+    Optional<Form> findFormByIdAndUsername(@Param("id") UUID id,
                                            @Param("username") String username);
 
     @Query("""

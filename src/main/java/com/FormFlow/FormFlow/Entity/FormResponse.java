@@ -8,6 +8,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 
 @Entity
@@ -18,10 +19,10 @@ import java.util.Map;
 public class FormResponse {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long responseId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID responseId;
 
-    private Long formId;
+    private UUID formId;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

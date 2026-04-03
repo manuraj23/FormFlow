@@ -3,6 +3,7 @@ package com.FormFlow.FormFlow.Entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Data
@@ -10,8 +11,8 @@ import java.time.Instant;
 public class RefreshToken {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     private String token;
 
