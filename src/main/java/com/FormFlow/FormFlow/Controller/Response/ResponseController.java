@@ -2,8 +2,11 @@ package com.FormFlow.FormFlow.Controller.Response;
 
 import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
 import com.FormFlow.FormFlow.Service.Response.ResponseService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
@@ -16,11 +19,28 @@ public class ResponseController {
     public ResponseController(ResponseService service) {
         this.service = service;
     }
-
-    @Operation(summary = "Submit a response to a form")
+    /*
+    // JSON endpoint — no files, standard request body
+    @Operation(summary = "Submit a response without files")
     @PostMapping
-    public FormResponseDTO submit(@RequestBody FormResponseDTO response) {
-        return service.saveResponse(response);
+    public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO) {
+        return service.saveResponse(responseDTO, null);
+    } */
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FormResponseDTO submitWithFiles(
+            @RequestPart("response") String responseJson,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            FormResponseDTO responseDTO = mapper.readValue(responseJson, FormResponseDTO.class);
+
+            return service.saveResponse(responseDTO, files);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid JSON format", e);
+        }
     }
 
     @Operation(summary = "Get all responses for a specific form by its ID")

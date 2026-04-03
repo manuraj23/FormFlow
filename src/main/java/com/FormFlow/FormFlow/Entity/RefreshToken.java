@@ -6,7 +6,7 @@ import java.time.Instant;
 
 @Entity
 @Data
-@Table(name = "refresh_token")
+@Table(name = "refresh_tokens")
 public class RefreshToken {
 
     @Id
