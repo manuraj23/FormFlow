@@ -19,15 +19,15 @@ public class ResponseController {
     public ResponseController(ResponseService service) {
         this.service = service;
     }
-
+    /*
     // JSON endpoint — no files, standard request body
     @Operation(summary = "Submit a response without files")
     @PostMapping
     public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO) {
         return service.saveResponse(responseDTO, null);
-    }
+    } */
 
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FormResponseDTO submitWithFiles(
             @RequestPart("response") String responseJson,
             @RequestPart(value = "files", required = false) List<MultipartFile> files

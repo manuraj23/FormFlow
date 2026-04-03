@@ -9,6 +9,7 @@ import com.FormFlow.FormFlow.Repository.FormSectionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,27 +42,59 @@ public class ResponseService {
     public FormResponseDTO saveResponse(FormResponseDTO dto,
                                         List<MultipartFile> files) {
 
-        // Step 1 — validate response against field validations
+
+        Map<String, String> uploadedFileMap = new HashMap<>();
+
+        // validate
         validateResponse(dto.getFormId(), dto.getResponse(), files);
 
-        // Step 2 — save uploaded files to local folder silently
+       // save files and fill map
         if (files != null && !files.isEmpty()) {
             for (MultipartFile file : files) {
                 if (!file.isEmpty()) {
-                    saveFileToLocal(file);
+                    String savedFileName = saveFileToLocal(file);
+                    uploadedFileMap.put(file.getOriginalFilename(), savedFileName);
+                }
+            }
+        }
+             // update response with urls
+        Map<String, Object> responseMap = dto.getResponse();
+
+        for (Map.Entry<String, Object> entry : new HashMap<>(responseMap).entrySet()) {
+
+            String label = entry.getKey();
+            Object value = entry.getValue();
+
+            if (value instanceof String) {
+                String fileName = (String) value;
+
+                if (uploadedFileMap.containsKey(fileName)) {
+                    String savedFileName = uploadedFileMap.get(fileName);
+                    // String fileUrl = "http://localhost:8082/uploads/" + savedFileName; - not dynamic so removed
+                    String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/uploads/")
+                            .path(savedFileName)
+                            .toUriString();
+
+                    responseMap.put(label, fileUrl);
                 }
             }
         }
 
-        // Step 3 — save response to DB
+
+        // Save response to DB
         FormResponse entity = mapToEntity(dto);
         entity.setSubmittedAt(LocalDateTime.now());
+
         FormResponse saved = repository.save(entity);
+
         return mapToDTO(saved);
     }
 
-    // saves file to local uploads/ folder
-    private void saveFileToLocal(MultipartFile file) {
+    // saves file to local uploads/ folder and return a unique file name
+    private String saveFileToLocal(MultipartFile file) {
+        String uniqueFileName;
+        String originalName;
         try {
             // create uploads directory if it doesn't exist
             Path uploadPath = Paths.get(uploadDir);
@@ -69,9 +102,13 @@ public class ResponseService {
                 Files.createDirectories(uploadPath);
             }
 
-            // save file with its original name
+            // save file with a unique file name for each
             // REPLACE_EXISTING overwrites if same filename uploaded again
-            Path filePath = uploadPath.resolve(file.getOriginalFilename());
+            // Path filePath = uploadPath.resolve(file.getOriginalFilename());
+            originalName = file.getOriginalFilename();
+            uniqueFileName = System.currentTimeMillis() + "_" + originalName;
+
+            Path filePath = uploadPath.resolve(uniqueFileName);
             Files.copy(file.getInputStream(), filePath,
                     StandardCopyOption.REPLACE_EXISTING);
 
@@ -79,6 +116,7 @@ public class ResponseService {
             throw new RuntimeException("Could not save file: "
                     + file.getOriginalFilename() + ". Error: " + e.getMessage());
         }
+        return uniqueFileName;
     }
 
     // validates all submitted response values against field validations
@@ -96,12 +134,7 @@ public class ResponseService {
             }
         }
 
-        // multiple files
-        if (files != null && submittedResponse != null) {
-            if (files.size() > submittedResponse.size()) {
-                throw new RuntimeException("Unexpected extra files uploaded");
-            }
-        }
+
 
         // fetch all sections with fields eagerly loaded in one query
         List<FormSection> sections = formSectionRepository
@@ -111,7 +144,7 @@ public class ResponseService {
 
         for (FormSection section : sections) {
 
-            // fields already loaded — no extra DB call needed
+
             List<FormFields> fields = section.getFields();
 
             for (FormFields field : fields) {
@@ -269,10 +302,24 @@ public class ResponseService {
                          */
 
                         case "FILE":
+
+                            // multiple files
+                            if (files != null) {
+                                long count = files.stream()
+                                        .filter(file -> file.getOriginalFilename().equals(valueStr))
+                                        .count();
+
+                                if (count > 1) {
+                                    throw new RuntimeException(
+                                            "Multiple files uploaded for field '" + label );
+                                }
+                            }
+
+                            MultipartFile uploadedFile = fileMap.get(valueStr);
                             // required validations
                             Object requiredFile = validations.get("required");
                             if (Boolean.TRUE.equals(requiredFile)) {
-                                MultipartFile uploadedFile = fileMap.get(valueStr);
+
 
                                 if (uploadedFile == null || uploadedFile.isEmpty()) {
                                     throw new RuntimeException(
@@ -300,7 +347,7 @@ public class ResponseService {
                                 long maxSizeKB = ((Number) maxSizeObj).longValue();
 
                                 // find actual uploaded file by matching filename
-                                MultipartFile uploadedFile = fileMap.get(valueStr);
+
                                 if (uploadedFile != null) {
                                     // getSize() returns bytes — divide by 1024 for KB
                                     long fileSizeKB = uploadedFile.getSize() / 1024;
@@ -312,29 +359,8 @@ public class ResponseService {
                                     }
                                 }
                             }
-                            break;
-                       /*
-                        case "RATING":
-                            try {
-                                int rating = Integer.parseInt(valueStr);
-                                Object minRating = validations.get("minRating");
-                                int minR = minRating != null
-                                        ? ((Number) minRating).intValue() : 1;
-                                Object maxRating = validations.get("maxRating");
-                                int maxR = maxRating != null
-                                        ? ((Number) maxRating).intValue() : 5;
-                                if (rating < minR || rating > maxR) {
-                                    throw new RuntimeException(
-                                            "Field '" + label + "' rating must be between "
-                                                    + minR + " and " + maxR);
-                                }
-                            } catch (NumberFormatException e) {
-                                throw new RuntimeException(
-                                        "Field '" + label + "' must be a valid rating number");
-                            }
-                            break;
 
-                        */
+                            break;
                     }
                 }
             }
