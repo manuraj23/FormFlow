@@ -17,9 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -120,11 +118,11 @@ public class ResponseService {
     }
 
     // validates all submitted response values against field validations
-    private void validateResponse(Long formId,
+    private void validateResponse(UUID formId,
                                   Map<String, Object> submittedResponse,
                                   List<MultipartFile> files) {
 
-        // build map of filename to MultipartFile for easy lookup during FILE validation
+       /* // build map of filename to MultipartFile for easy lookup during FILE validation
         Map<String, MultipartFile> fileMap = new HashMap<>();
         if (files != null) {
             for (MultipartFile file : files) {
@@ -132,14 +130,44 @@ public class ResponseService {
                     fileMap.put(file.getOriginalFilename(), file);
                 }
             }
+        } */
+
+        // build map of filename to MultipartFile for easy lookup during FILE validation
+        Map<String, MultipartFile> fileMap = new HashMap<>();
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file.getOriginalFilename() != null) {
+                    // check for duplicate filenames first
+                    if (fileMap.containsKey(file.getOriginalFilename())) {
+                        throw new RuntimeException(
+                                "Duplicate file name detected: " + file.getOriginalFilename()
+                                        + ". Each uploaded file must have a unique name");
+                    }
+                    fileMap.put(file.getOriginalFilename(), file);
+                }
+            }
         }
+
 
 
 
         // fetch all sections with fields eagerly loaded in one query
         List<FormSection> sections = formSectionRepository
                 .findByFormIdInWithFields(List.of(formId));
+        // count FILE fields in this form
+        long fileFieldCount = sections.stream()
+                .flatMap(s -> s.getFields().stream())
+                .filter(f -> f.getFieldType() != null &&
+                        f.getFieldType().name().equals("FILE"))
+                .count();
 
+        // reject if more files uploaded than FILE fields exist
+        if (files != null &&
+                files.stream().filter(f -> !f.isEmpty()).count() > fileFieldCount) {
+            throw new RuntimeException(
+                    "Too many files uploaded. This form only accepts "
+                            + fileFieldCount + " file(s)");
+        }
 
 
         for (FormSection section : sections) {
@@ -213,32 +241,26 @@ public class ResponseService {
                                             "Field '" + label + "' must be a valid email address");
                                 }
                             }
+                            Object numberValidation = validations.get("number");
+                            if (Boolean.TRUE.equals(numberValidation)) {
+                                double parsedValue;
+                                try {
+                                    parsedValue = Double.parseDouble(valueStr);
+                                } catch (NumberFormatException e) {
+                                    throw new RuntimeException("Field '" + label + "' must be a valid number");
+                                }
+                                Object minVal = validations.get("min");
+                                if (minVal != null && parsedValue < ((Number) minVal).doubleValue()) {
+                                    throw new RuntimeException("Field '" + label + "' must be at least " + minVal);
+                                }
+                                Object maxVal = validations.get("max");
+                                if (maxVal != null && parsedValue > ((Number) maxVal).doubleValue()) {
+                                    throw new RuntimeException("Field '" + label + "' must be at most " + maxVal);
+                                }
+                            }
                             break;
                        /*
-                        case "NUMBER":
-                            try {
-                                Double.parseDouble(valueStr);
-                            } catch (NumberFormatException e) {
-                                throw new RuntimeException(
-                                        "Field '" + label + "' must be a number");
-                            }
-                            Object minVal = validations.get("min");
-                            if (minVal != null) {
-                                double min = ((Number) minVal).doubleValue();
-                                if (Double.parseDouble(valueStr) < min) {
-                                    throw new RuntimeException(
-                                            "Field '" + label + "' must be at least " + min);
-                                }
-                            }
-                            Object maxVal = validations.get("max");
-                            if (maxVal != null) {
-                                double max = ((Number) maxVal).doubleValue();
-                                if (Double.parseDouble(valueStr) > max) {
-                                    throw new RuntimeException(
-                                            "Field '" + label + "' must be at most " + max);
-                                }
-                            }
-                            break;
+
 
                         case "PHONE":
                             if (!valueStr.matches("^[+]?[0-9\\s\\-().]{7,15}$")) {
@@ -279,10 +301,25 @@ public class ResponseService {
                             break;
 
                         case "CHECKBOX":
-                            if (!valueStr.equalsIgnoreCase("true") &&
-                                    !valueStr.equalsIgnoreCase("false")) {
-                                throw new RuntimeException(
-                                        "Field '" + label + "' must be true or false");
+                            if (options != null && !options.isEmpty()) {
+                                List<String> selected;
+                                if (submittedValue instanceof List) {
+                                    selected = (List<String>) submittedValue;
+                                } else {
+                                    selected = Arrays.asList(valueStr.split(","));
+                                }
+                                if (selected.isEmpty()) {
+                                    Object requiredCheck = validations.get("required");
+                                    if (Boolean.TRUE.equals(requiredCheck)) {
+                                        throw new RuntimeException("Field '" + label + "' is required");
+                                    }
+                                }
+                                for (String s : selected) {
+                                    if (!options.contains(s.trim())) {
+                                        throw new RuntimeException(
+                                                "Field '" + label + "' contains invalid option: " + s.trim());
+                                    }
+                                }
                             }
                             break;
                         /*
@@ -303,7 +340,7 @@ public class ResponseService {
 
                         case "FILE":
 
-                            // multiple files
+                            /* multiple files
                             if (files != null) {
                                 long count = files.stream()
                                         .filter(file -> file.getOriginalFilename().equals(valueStr))
@@ -313,7 +350,7 @@ public class ResponseService {
                                     throw new RuntimeException(
                                             "Multiple files uploaded for field '" + label );
                                 }
-                            }
+                            }  */
 
                             MultipartFile uploadedFile = fileMap.get(valueStr);
                             // required validations
@@ -328,16 +365,22 @@ public class ResponseService {
                             }
                             // check file extension using fileType from validations
                             Object fileTypeObj = validations.get("fileType");
-                            if (fileTypeObj instanceof List) {
-                                List<String> allowedTypes = (List<String>) fileTypeObj;
+                            if (fileTypeObj != null) {
+                                // handle both String and List formats
+                                List<String> allowedTypes;
+                                if (fileTypeObj instanceof List) {
+                                    allowedTypes = (List<String>) fileTypeObj;
+                                } else {
+
+                                    allowedTypes = Arrays.stream(fileTypeObj.toString().split(","))
+                                            .map(ext -> ext.trim().startsWith(".") ? ext.trim() : "." + ext.trim())
+                                            .collect(Collectors.toList());
+                                }
                                 boolean validExtension = allowedTypes.stream()
-                                        .anyMatch(ext ->
-                                                valueStr.toLowerCase()
-                                                        .endsWith(ext.toLowerCase()));
+                                        .anyMatch(ext -> valueStr.toLowerCase().endsWith(ext.toLowerCase()));
                                 if (!validExtension) {
                                     throw new RuntimeException(
-                                            "Field '" + label +
-                                                    "' must be one of these file types: " + allowedTypes);
+                                            "Field '" + label + "' must be one of these file types: " + allowedTypes);
                                 }
                             }
 
@@ -367,7 +410,7 @@ public class ResponseService {
         }
     }
 
-    public List<FormResponseDTO> getResponses(Long formId) {
+    public List<FormResponseDTO> getResponses(UUID formId) {
         return repository.findByFormId(formId)
                 .stream()
                 .map(this::mapToDTO)

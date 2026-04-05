@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/public")
 public class PublicController {
@@ -19,7 +21,7 @@ public class PublicController {
     
     @Operation(summary = "Get a form by its ID")
     @GetMapping("/form/{id}")
-    public FormGetDTO getFormById(@PathVariable Long id){
+    public FormGetDTO getFormById(@PathVariable UUID id){
         return publicService.getFormById(id);
     }
 }

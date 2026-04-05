@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AdminService {
@@ -46,7 +47,7 @@ public class AdminService {
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
-        List<Long> formIds = forms.stream().map(Form::getId).toList();
+        List<UUID> formIds = forms.stream().map(Form::getId).toList();
         formSectionRepository.findByFormIdInWithFields(formIds);
         return forms.stream()
                 .map(this::convertToDTO)

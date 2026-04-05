@@ -7,16 +7,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface FormSectionRepository extends JpaRepository<FormSection, Long> {
+public interface FormSectionRepository extends JpaRepository<FormSection, UUID> {
 
     @Query("""
         SELECT DISTINCT s FROM FormSection s
         LEFT JOIN FETCH s.fields
         WHERE s.form.id IN :formIds
     """)
-    List<FormSection> findByFormIdInWithFields(@Param("formIds") List<Long> formIds);
+    List<FormSection> findByFormIdInWithFields(@Param("formIds") List<UUID> formIds);
 
 
 }
