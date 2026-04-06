@@ -28,9 +28,36 @@ release.properties
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# =========================
+# IntelliJ IDEA
+# =========================
+.idea/
+*.iml
+*.iws
+out/
 
-#target
-target/
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+spring.log
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.temp
+*.swp
