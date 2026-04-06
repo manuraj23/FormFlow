@@ -11,7 +11,7 @@ import java.util.List;
 public class TempUserCleanupScheduler {
     @Autowired
     private TempUserRepository tempUserRepository;
-    @Scheduled(fixedRate = 600000) // every 10 min
+    @Scheduled(cron = "0 */5 * * * *")
     public void removeExpiredTempUsers() {
         List<TempUser> users = tempUserRepository.findAll();
         for(TempUser user : users){
