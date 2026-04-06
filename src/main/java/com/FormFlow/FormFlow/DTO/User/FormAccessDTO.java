@@ -18,5 +18,6 @@ public class FormAccessDTO {
         private List<String> editor;
         private List<String> responder;
         private List<String> viewer;
+        private List<String> responseViewer;
     }
 }

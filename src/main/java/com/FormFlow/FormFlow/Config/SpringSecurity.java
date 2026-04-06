@@ -36,7 +36,7 @@ public class SpringSecurity {
                         .requestMatchers("/auth/**","/swagger-ui/**","/swagger-ui.html","/v3/api-docs/**","/api/responses/**","/public/**","/uploads/**").permitAll()
 //                        .requestMatchers("/createForm", "/allForm", "/forms/**", "/api/responses/**").authenticated()
                         .requestMatchers("/user/**").authenticated()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").authenticated()
                         .anyRequest().denyAll()
                 );
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

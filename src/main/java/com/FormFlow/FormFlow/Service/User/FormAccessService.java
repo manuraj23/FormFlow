@@ -69,6 +69,14 @@ public class FormAccessService {
             });
         }
 
+        // RESPONSE VIEWERS
+        if (dto.getAccess().getResponseViewer() != null) {
+            dto.getAccess().getResponseViewer().forEach(username -> {
+                User user = getUser(username);
+                newRolesMap.put(user.getUserId(), RoleType.RESPONSE_VIEWER);
+            });
+        }
+
         List<UserFormRole> toDelete = new ArrayList<>();
         List<UserFormRole> newEntities = new ArrayList<>();
 
@@ -161,6 +169,7 @@ public class FormAccessService {
         List<String> editors = new ArrayList<>();
         List<String> responders = new ArrayList<>();
         List<String> viewers = new ArrayList<>();
+        List<String> responseViewers = new ArrayList<>();
 
         for (UserFormRole role : roles) {
 
@@ -174,12 +183,15 @@ public class FormAccessService {
                 case EDITOR -> editors.add(user.getUsername());
                 case RESPONDER -> responders.add(user.getUsername());
                 case VIEWER -> viewers.add(user.getUsername());
+                case RESPONSE_VIEWER -> responseViewers.add(user.getUsername());
+
             }
         }
 
         access.setEditor(editors);
         access.setResponder(responders);
         access.setViewer(viewers);
+        access.setResponseViewer(responseViewers);
 
         dto.setAccess(access);
 

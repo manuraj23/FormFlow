@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Data
-@Table(name = "refresh_tokens")
+@Table(name = "refresh_token")
 public class RefreshToken {
 
     @Id

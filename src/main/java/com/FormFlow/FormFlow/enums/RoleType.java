@@ -4,5 +4,6 @@ public enum RoleType {
     OWNER,
     EDITOR,
     RESPONDER,
-    VIEWER
+    VIEWER,
+    RESPONSE_VIEWER
 }
