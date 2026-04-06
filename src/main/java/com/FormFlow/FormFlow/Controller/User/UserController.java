@@ -2,6 +2,8 @@ package com.FormFlow.FormFlow.Controller.User;
 
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
+import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
+import com.FormFlow.FormFlow.Service.User.FormAccessService;
 import com.FormFlow.FormFlow.Service.User.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private FormAccessService formAccessService;
 
     @Operation(summary = "Create a new form")
     @PostMapping("/createForm")
@@ -113,4 +118,25 @@ public class UserController {
         }
     }
 
+    @PostMapping("/save")
+    public ResponseEntity<?> saveAccess(@RequestBody FormAccessDTO dto) {
+        formAccessService.saveAccess(dto);
+        return ResponseEntity.ok("Access updated successfully");
+    }
+
+    @GetMapping("/shared-forms")
+    public ResponseEntity<?> getSharedForms() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        // convert username to userId inside service
+        UUID userId = formAccessService.getUserIdByUsername(username);
+
+        return ResponseEntity.ok(formAccessService.getSharedForms(userId));
+    }
+
+    @GetMapping("/access/{formId}")
+    public FormAccessDTO getAccess(@PathVariable UUID formId) {
+        return formAccessService.getAccess(formId);
+    }
 }
