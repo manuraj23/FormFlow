@@ -1,9 +1,11 @@
 package com.FormFlow.FormFlow.Service.Response;
 
 import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
+import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.FormFields;
 import com.FormFlow.FormFlow.Entity.FormResponse;
 import com.FormFlow.FormFlow.Entity.FormSection;
+import com.FormFlow.FormFlow.Repository.FormRepository;
 import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 import com.FormFlow.FormFlow.Repository.FormSectionRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,15 +27,18 @@ public class ResponseService {
 
     private final FormResponseRepository repository;
     private final FormSectionRepository formSectionRepository;
+    private final FormRepository formRepository;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
     private String uploadDir;
 
     public ResponseService(FormResponseRepository repository,
-                           FormSectionRepository formSectionRepository) {
+                           FormSectionRepository formSectionRepository,
+                           FormRepository formRepository) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
+        this.formRepository = formRepository;
     }
 
     // updated to accept files alongside response data
@@ -42,6 +47,9 @@ public class ResponseService {
 
 
         Map<String, String> uploadedFileMap = new HashMap<>();
+
+        //validate form limits
+        validateFormLimits(dto.getFormId());
 
         // validate
         validateResponse(dto.getFormId(), dto.getResponse(), files);
@@ -60,7 +68,8 @@ public class ResponseService {
 
         for (Map.Entry<String, Object> entry : new HashMap<>(responseMap).entrySet()) {
 
-            String label = entry.getKey();
+            // change_1 : making field ids the keys instead of labels
+            String fieldId = entry.getKey();
             Object value = entry.getValue();
 
             if (value instanceof String) {
@@ -74,7 +83,7 @@ public class ResponseService {
                             .path(savedFileName)
                             .toUriString();
 
-                    responseMap.put(label, fileUrl);
+                    responseMap.put(fieldId, fileUrl);
                 }
             }
         }
@@ -115,6 +124,43 @@ public class ResponseService {
                     + file.getOriginalFilename() + ". Error: " + e.getMessage());
         }
         return uniqueFileName;
+    }
+
+    private void validateFormLimits(UUID formId) {
+
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+
+        Map<String, Object> settings = form.getSettings();
+        if (settings == null) return;
+
+        // checking deadline
+        Object deadlineObj = settings.get("deadline");
+        if (deadlineObj != null) {
+            try {
+                LocalDateTime deadline = LocalDateTime.parse(deadlineObj.toString());
+
+                if (LocalDateTime.now().isAfter(deadline)) {
+                    throw new RuntimeException("Form submission deadline has passed");
+                }
+            }catch (RuntimeException e) {
+                throw e;
+            }  catch (Exception e) {
+                throw new RuntimeException("Invalid deadline format in form settings");
+            }
+        }
+
+        //  max responses check
+        Object maxResponsesObj = settings.get("maxResponses");
+        if (maxResponsesObj != null) {
+            int maxResponses = ((Number) maxResponsesObj).intValue();
+
+            long currentCount = repository.countByFormId(formId);
+
+            if (currentCount >= maxResponses) {
+                throw new RuntimeException("Maximum response limit reached");
+            }
+        }
     }
 
     // validates all submitted response values against field validations
@@ -188,7 +234,11 @@ public class ResponseService {
 
                 List<String> options = (List<String>) config.get("options");
 
-                Object submittedValue = submittedResponse.get(label);
+                // changed: looking up submitted value by field ID instead of label ***
+                String fieldId = field.getId() != null ? field.getId().toString() : null;
+                if (fieldId == null) continue;
+
+                Object submittedValue = submittedResponse.get(fieldId);
                 String valueStr = submittedValue != null
                         ? submittedValue.toString().trim() : null;
 
@@ -365,7 +415,7 @@ public class ResponseService {
                             }
                             // check file extension using fileType from validations
                             Object fileTypeObj = validations.get("fileType");
-                            if (fileTypeObj != null) {
+                            if (fileTypeObj != null && !fileTypeObj.toString().trim().isEmpty()) {
                                 // handle both String and List formats
                                 List<String> allowedTypes;
                                 if (fileTypeObj instanceof List) {

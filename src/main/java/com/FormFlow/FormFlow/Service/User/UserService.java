@@ -38,9 +38,11 @@ public class UserService {
 
         User user = userRepository.findByUsername(username);
         Form form = new Form();
+        form.setTheme(dto.getTheme());
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
+        form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
 
@@ -67,6 +69,7 @@ public class UserService {
 
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
+                        field.setFieldStyle(fieldDTO.getFieldStyle());
                         field.setSection(section);
 
                         return field;
@@ -184,8 +187,10 @@ public class UserService {
     private FormGetDTO convertToDTO(Form form) {
         FormGetDTO dto = new FormGetDTO();
         dto.setId(form.getId());
+        dto.setTheme(form.getTheme());
         dto.setTitle(form.getTitle());
         dto.setDescription(form.getDescription());
+        dto.setSettings(form.getSettings());
         dto.setPublished(form.isPublished());
         dto.setCreatedAt(form.getCreatedAt());
         dto.setCreatedBy(form.getUser().getUsername());
@@ -193,14 +198,17 @@ public class UserService {
         if (form.getSections() != null) {
             dto.setSections(form.getSections().stream().map(section -> {
                 SectionDTO sectionDTO = new SectionDTO();
+                sectionDTO.setId(section.getId());
                 sectionDTO.setSectionTitle(section.getSectionTitle());
                 sectionDTO.setSectionOrder(section.getSectionOrder());
 
                 if (section.getFields() != null) {
                     sectionDTO.setFields(section.getFields().stream().map(field -> {
                         FieldDTO fieldDTO = new FieldDTO();
+                        fieldDTO.setId(field.getId());
                         fieldDTO.setFieldType(field.getFieldType().name());
                         fieldDTO.setFieldOrder(field.getFieldOrder());
+                        fieldDTO.setFieldStyle(field.getFieldStyle());
                         fieldDTO.setFieldConfig(field.getFieldConfig());
                         return fieldDTO;
                     }).toList());
