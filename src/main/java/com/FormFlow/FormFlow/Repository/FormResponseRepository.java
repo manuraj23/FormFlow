@@ -14,5 +14,7 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, UUID
     @Query(value = "SELECT * FROM form_responses WHERE response ->> 'Email' = :email", nativeQuery = true)
     List<FormResponse> findByEmail(String email);
 
+    long countByFormId(UUID formId);
+
     boolean existsByFormId(UUID formId);
 }
