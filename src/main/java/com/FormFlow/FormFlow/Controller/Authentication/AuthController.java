@@ -145,7 +145,7 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto){
         try {
             AuthResponseDTO response = authService.resetPassword(dto.getEmail(), dto.getNewPassword());
-            return ResponseEntity.ok("Password reset successful");
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         } catch (IllegalStateException ex) {
