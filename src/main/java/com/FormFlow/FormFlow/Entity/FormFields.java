@@ -32,6 +32,10 @@ public class FormFields {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> fieldConfig;
 
+    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> fieldStyle;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id")
     @JsonIgnore
