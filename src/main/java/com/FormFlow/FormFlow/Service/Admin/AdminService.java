@@ -68,14 +68,14 @@ public class AdminService {
         if (form.getSections() != null) {
             dto.setSections(form.getSections().stream().map(section -> {
                 SectionDTO sectionDTO = new SectionDTO();
-                sectionDTO.setId(section.getId());
+                sectionDTO.setId(section.getId().toString());
                 sectionDTO.setSectionTitle(section.getSectionTitle());
                 sectionDTO.setSectionOrder(section.getSectionOrder());
 
                 if (section.getFields() != null) {
                     sectionDTO.setFields(section.getFields().stream().map(field -> {
                         FieldDTO fieldDTO = new FieldDTO();
-                        fieldDTO.setId(field.getId());
+                        fieldDTO.setId(field.getId().toString());
                         fieldDTO.setFieldType(field.getFieldType().name());
                         fieldDTO.setFieldOrder(field.getFieldOrder());
                         fieldDTO.setFieldStyle(field.getFieldStyle());

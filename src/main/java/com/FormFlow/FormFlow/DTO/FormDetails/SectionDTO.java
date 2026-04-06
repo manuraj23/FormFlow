@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 public class SectionDTO {
 
-    private UUID id;
+    private String id;
     private String sectionTitle;
     private int sectionOrder;
 
