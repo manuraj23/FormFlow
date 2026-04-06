@@ -1,10 +1,8 @@
 package com.FormFlow.FormFlow.Service.Authentication;
 import com.FormFlow.FormFlow.DTO.Auth.AuthResponseDTO;
 import com.FormFlow.FormFlow.DTO.Auth.Login.NewLoginDTO;
-import com.FormFlow.FormFlow.DTO.Auth.LoginDTO;
 import com.FormFlow.FormFlow.DTO.Auth.SignUp.SignUpDTOnew;
 import com.FormFlow.FormFlow.DTO.Auth.SignUp.VarifyAccountDTO;
-import com.FormFlow.FormFlow.DTO.Auth.SignUpDTO;
 import com.FormFlow.FormFlow.Entity.RefreshToken;
 import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Entity.UserEntity.PasswordResetTemp;
@@ -12,6 +10,7 @@ import com.FormFlow.FormFlow.Entity.UserEntity.TempUser;
 import com.FormFlow.FormFlow.Repository.User.PasswordResetTempRepository;
 import com.FormFlow.FormFlow.Repository.User.TempUserRepository;
 import com.FormFlow.FormFlow.Repository.UserRepository;
+import com.FormFlow.FormFlow.Service.Email.ResetPasswordEmailService;
 import com.FormFlow.FormFlow.Service.Email.VarifyAccountEmailService;
 import com.FormFlow.FormFlow.Utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,44 +51,10 @@ public class AuthService {
     @Autowired
     private VarifyAccountEmailService emailService;
 
+    @Autowired
+    private ResetPasswordEmailService resetPasswordEmailService;
+
     private static final PasswordEncoder passwordEncoder= new BCryptPasswordEncoder();
-
-    public void saveNewUser(SignUpDTO signUpDTO) {
-        if (signUpDTO.getUsername() == null || signUpDTO.getUsername().isBlank()) {
-            throw new IllegalArgumentException("Username is required");
-        }
-        if (signUpDTO.getPassword() == null || signUpDTO.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Password is required");
-        }
-        if (userRepository.existsByUsername(signUpDTO.getUsername())) {
-            throw new IllegalStateException("Username already exists");
-        }
-
-        User user = new User();
-        user.setUsername(signUpDTO.getUsername());
-        user.setPassword(passwordEncoder.encode(signUpDTO.getPassword()));
-        user.setRoles(List.of("USER"));
-
-        userRepository.save(user);
-    }
-
-    public AuthResponseDTO login(LoginDTO loginDTO) {
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginDTO.getUsername(),
-                        loginDTO.getPassword()
-                )
-        );
-
-        User user = userRepository.findByUsername(loginDTO.getUsername());
-
-        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
-
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-
-        return new AuthResponseDTO(accessToken, refreshToken.getToken());
-    }
 
     public AuthResponseDTO loginNew(NewLoginDTO newLoginDTO) {
         String identifier = normalizeIdentifier(newLoginDTO.getIdentifier());
@@ -152,7 +117,7 @@ public class AuthService {
         varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
     }
 
-    public void verifyAccount(VarifyAccountDTO varifyAccountDTO) {
+    public AuthResponseDTO verifyAccount(VarifyAccountDTO varifyAccountDTO) {
         TempUser tempUser = tempUserRepository.findByEmail(varifyAccountDTO.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -179,9 +144,12 @@ public class AuthService {
         user.setRoles(List.of("USER"));
         userRepository.save(user);
         tempUserRepository.deleteByEmail(varifyAccountDTO.getEmail());
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+        return new AuthResponseDTO(accessToken, refreshToken.getToken());
     }
 
-    public void forgotPassword(String identifier) {
+    public String forgotPassword(String identifier) {
         String normalizedIdentifier = normalizeIdentifier(identifier);
         if (normalizedIdentifier == null || normalizedIdentifier.isBlank()) {
             throw new IllegalArgumentException("Username or email is required");
@@ -208,7 +176,8 @@ public class AuthService {
         temp.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
 
         passwordResetTempRepository.save(temp);
-        emailService.sendOtp(email, otp);
+        resetPasswordEmailService.sendOtp(email, otp);
+        return user.getEmail();
     }
 
     @Transactional
@@ -245,7 +214,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void resetPassword(String email, String newPassword) {
+    public AuthResponseDTO resetPassword(String email, String newPassword) {
 
         PasswordResetTemp temp = passwordResetTempRepository
                 .findByEmail(email)
@@ -264,7 +233,9 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         passwordResetTempRepository.deleteByEmail(email);
+
+        String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+        return new AuthResponseDTO(accessToken, refreshToken.getToken());
     }
-
-
 }

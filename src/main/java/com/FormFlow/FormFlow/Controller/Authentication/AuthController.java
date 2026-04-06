@@ -38,29 +38,13 @@ public class AuthController {
     @Autowired
     private RefreshTokenService refreshTokenService;
 
-    @Operation(summary = "Register a new user")
-    @PostMapping("/signup")
-    public ResponseEntity<?>signup(@RequestBody SignUpDTO signUpDTO){
-        try{
-            authService.saveNewUser(signUpDTO);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("message", "User registered successfully"));
-        } catch(IllegalStateException ex){
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Username already exists");
-        } catch (IllegalArgumentException ex){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ex.getMessage());
-        }
-    }
-
     @Operation(summary = "New Signup Method")
-    @PostMapping("/newsignup")
+    @PostMapping("/signup")
     public ResponseEntity<?>newSignUP(@RequestBody SignUpDTOnew signUpDTOnew){
         try{
             authService.saveNewUserNew(signUpDTOnew);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("message", "OTP sent to email, Verify your account"));
+                    .body(Map.of("message", "OTP sent to " + signUpDTOnew.getEmail() + ", Verify your account"));
 
         }catch(IllegalStateException ex){
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -75,8 +59,8 @@ public class AuthController {
     @PostMapping("/varifyaccount")
     public ResponseEntity<?>varifyAccount(@RequestBody VarifyAccountDTO varifyAccountDTO){
         try{
-            authService.verifyAccount(varifyAccountDTO);
-            return ResponseEntity.ok("Account Verified Successfully");
+            AuthResponseDTO response =authService.verifyAccount(varifyAccountDTO);
+            return ResponseEntity.ok(response);
         } catch (IllegalStateException ex){
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("OTP expired or invalid");
@@ -87,14 +71,8 @@ public class AuthController {
 
     }
 
-    @Operation(summary = "Login a registered user")
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO) {
-        return ResponseEntity.ok(authService.login(loginDTO));
-    }
-
     @Operation(summary = "Login using Username or Email")
-    @PostMapping("/loginnew")
+    @PostMapping("/login")
     public ResponseEntity<?> loginNew(@RequestBody NewLoginDTO newLoginDTO) {
         try {
             return ResponseEntity.ok(authService.loginNew(newLoginDTO));
@@ -140,8 +118,8 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDTO dto){
         try {
-            authService.forgotPassword(dto.getIdentifier());
-            return ResponseEntity.ok("OTP sent to registered email");
+            String email=authService.forgotPassword(dto.getIdentifier());
+            return ResponseEntity.ok(Map.of("email", email));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         } catch (IllegalStateException ex) {
@@ -166,7 +144,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto){
         try {
-            authService.resetPassword(dto.getEmail(), dto.getNewPassword());
+            AuthResponseDTO response = authService.resetPassword(dto.getEmail(), dto.getNewPassword());
             return ResponseEntity.ok("Password reset successful");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
