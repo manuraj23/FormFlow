@@ -18,5 +18,10 @@ public interface PasswordResetTempRepository extends JpaRepository<PasswordReset
     @Query("DELETE FROM PasswordResetTemp p WHERE p.email = :email")
     void deleteByEmail(String email);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PasswordResetTemp p WHERE p.otpExpiry < :currentTime")
+    void deleteByOtpExpiry(java.time.LocalDateTime currentTime);
+
     boolean existsByEmail(String email);
 }
