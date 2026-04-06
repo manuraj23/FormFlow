@@ -1,16 +1,25 @@
-# Compiled class file
+# =========================
+# Java
+# =========================
 *.class
-
-# Log file
 *.log
-
-# BlueJ files
 *.ctxt
+hs_err_pid*
+replay_pid*
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# =========================
+# Maven
+# =========================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
 
-# Package Files #
+# =========================
+# Package Files
+# =========================
 *.jar
 *.war
 *.nar

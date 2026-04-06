@@ -4,9 +4,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,10 +17,17 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    private final String SECRET_KEY = "TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V";
+    private final String secretKey;
+
+    public JwtUtils(@Value("${SECRET_KEY}") String secretKey) {
+        this.secretKey = secretKey;
+    }
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        if (secretKey == null || secretKey.length() < 32) {
+            throw new IllegalStateException("SECRET_KEY must be set and at least 32 characters long");
+        }
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     public String extractUsername(String token) {
