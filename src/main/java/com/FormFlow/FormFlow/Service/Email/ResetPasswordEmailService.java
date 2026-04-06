@@ -17,7 +17,7 @@ public class ResetPasswordEmailService {
         message.setSubject("Reset Password OTP - FormFlow");
         message.setText(
                 "Your OTP for reset password is: " + otp +
-                        "\n\nThis OTP will expire in 10 minutes." +
+                        "\n\nThis OTP will expire in 5 minutes." +
                         "\n\nDo not share this OTP with anyone."
         );
         mailSender.send(message);

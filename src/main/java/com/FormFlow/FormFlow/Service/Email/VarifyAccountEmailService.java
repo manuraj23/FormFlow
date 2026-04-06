@@ -19,7 +19,7 @@ public class VarifyAccountEmailService {
         message.setSubject("Account Verification OTP - FormFlow");
         message.setText(
                 "Your OTP for account verification is: " + otp +
-                        "\n\nThis OTP will expire in 10 minutes." +
+                        "\n\nThis OTP will expire in 5 minutes." +
                         "\n\nDo not share this OTP with anyone."
         );
 

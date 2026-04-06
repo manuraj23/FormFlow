@@ -22,4 +22,5 @@ public class PasswordResetTemp {
     private String otp;
     private int otpAttempts;
     private LocalDateTime otpExpiry;
+    private boolean isVerified;
 }

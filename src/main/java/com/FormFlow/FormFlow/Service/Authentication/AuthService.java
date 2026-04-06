@@ -49,9 +49,6 @@ public class AuthService {
     private PasswordResetTempRepository passwordResetTempRepository;
 
     @Autowired
-    private VarifyAccountEmailService emailService;
-
-    @Autowired
     private ResetPasswordEmailService resetPasswordEmailService;
 
     private static final PasswordEncoder passwordEncoder= new BCryptPasswordEncoder();
@@ -164,17 +161,25 @@ public class AuthService {
             throw new IllegalStateException("No email is linked to this account");
         }
 
-        if(passwordResetTempRepository.existsByEmail(email))
-            throw new IllegalStateException("OTP already sent. Verify first.");
-
         String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+
+        if(passwordResetTempRepository.existsByEmail(email)){
+            PasswordResetTemp existingUser=passwordResetTempRepository.findByEmail(email).orElseThrow();
+            existingUser.setOtp(otp);
+            existingUser.setOtpAttempts(0);
+            existingUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+            existingUser.setVerified(false);
+            passwordResetTempRepository.save(existingUser);
+            resetPasswordEmailService.sendOtp(email, otp);
+            return user.getEmail();
+        }
 
         PasswordResetTemp temp = new PasswordResetTemp();
         temp.setEmail(email);
         temp.setOtp(otp);
         temp.setOtpAttempts(0);
-        temp.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
-
+        temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        temp.setVerified(false);
         passwordResetTempRepository.save(temp);
         resetPasswordEmailService.sendOtp(email, otp);
         return user.getEmail();
@@ -187,18 +192,18 @@ public class AuthService {
                 .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("OTP not requested"));
 
-        if (temp.getOtp() == null) {
+        if (temp.isVerified()) {
             throw new IllegalStateException("OTP already verified. Proceed to reset password.");
         }
 
         if(temp.getOtpAttempts() >= 5){
             passwordResetTempRepository.deleteByEmail(email);
-            throw new IllegalStateException("Max OTP attempts reached");
+            throw new IllegalStateException("Max OTP attempts reached. Move to Forget password page");
         }
 
         if(temp.getOtpExpiry().isBefore(LocalDateTime.now())){
             passwordResetTempRepository.deleteByEmail(email);
-            throw new IllegalStateException("OTP expired");
+            throw new IllegalStateException("OTP expired. Move to Forget password page");
         }
 
         if(!temp.getOtp().equals(otp)){
@@ -207,9 +212,7 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid OTP");
         }
 
-        temp.setOtp(null);
-        temp.setOtpAttempts(0);
-        temp.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+        temp.setVerified(true);
         passwordResetTempRepository.save(temp);
     }
 
@@ -220,7 +223,7 @@ public class AuthService {
                 .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("OTP not verified"));
 
-        if (temp.getOtp() != null) {
+        if (!temp.isVerified()) {
             throw new IllegalStateException("OTP verification required before resetting password");
         }
         if(temp.getOtpExpiry().isBefore(LocalDateTime.now())){
