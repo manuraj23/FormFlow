@@ -12,7 +12,6 @@ public interface UserFormRoleRepository extends JpaRepository<UserFormRole, UUID
 
     void deleteByFormId(UUID formId);
 
-    List<UserFormRole> findByUserIdAndIsViewedFalse(UUID userId);
-
-    List<UserFormRole> findByUserIdAndIsViewedTrue(UUID userId);
+    List<UserFormRole> findByUser_UserIdAndIsViewedFalse(UUID userId);
+    List<UserFormRole> findByUser_UserIdAndIsViewedTrue(UUID userId);
 }

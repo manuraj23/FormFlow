@@ -22,7 +22,9 @@ public class FormResponse {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID responseId;
 
-    private UUID formId;
+    @ManyToOne
+    @JoinColumn(name = "form_id", nullable = false)
+    private Form form;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

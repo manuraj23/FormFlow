@@ -1,6 +1,7 @@
 package com.FormFlow.FormFlow.Service.User;
 
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
+import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Entity.UserFormRole;
 import com.FormFlow.FormFlow.enums.RoleType;
@@ -28,24 +29,20 @@ public class FormAccessService {
 
         UUID formId = dto.getFormId();
 
-        //Fetch existing roles
+        // Fetch existing roles
         List<UserFormRole> existingRoles = roleRepo.findByFormId(formId);
 
-        //Map existing users
         Map<UUID, UserFormRole> existingMap = existingRoles.stream()
-                .collect(Collectors.toMap(UserFormRole::getUserId, r -> r));
+                .collect(Collectors.toMap(r -> r.getUser().getUserId(), r -> r));
 
-        //Prepare new roles map
         Map<UUID, RoleType> newRolesMap = new HashMap<>();
 
         // OWNER
         User owner = userRepo.findByUsername(dto.getOwner());
-        if (owner == null) {
-            throw new RuntimeException("Owner not found");
-        }
+        if (owner == null) throw new RuntimeException("Owner not found");
         newRolesMap.put(owner.getUserId(), RoleType.OWNER);
 
-        // EDITORS
+        // EDITOR
         if (dto.getAccess().getEditor() != null) {
             dto.getAccess().getEditor().forEach(username -> {
                 User user = getUser(username);
@@ -53,7 +50,7 @@ public class FormAccessService {
             });
         }
 
-        // RESPONDERS
+        // RESPONDER
         if (dto.getAccess().getResponder() != null) {
             dto.getAccess().getResponder().forEach(username -> {
                 User user = getUser(username);
@@ -61,7 +58,7 @@ public class FormAccessService {
             });
         }
 
-        // VIEWERS
+        // VIEWER
         if (dto.getAccess().getViewer() != null) {
             dto.getAccess().getViewer().forEach(username -> {
                 User user = getUser(username);
@@ -69,33 +66,23 @@ public class FormAccessService {
             });
         }
 
-        // RESPONSE VIEWERS
-        if (dto.getAccess().getResponseViewer() != null) {
-            dto.getAccess().getResponseViewer().forEach(username -> {
-                User user = getUser(username);
-                newRolesMap.put(user.getUserId(), RoleType.RESPONSE_VIEWER);
-            });
-        }
-
         List<UserFormRole> toDelete = new ArrayList<>();
         List<UserFormRole> newEntities = new ArrayList<>();
 
-        //Handle existing users
+        // HANDLE EXISTING USERS
         for (UserFormRole existing : existingRoles) {
 
-            UUID userId = existing.getUserId();
+            UUID userId = existing.getUser().getUserId();
 
             if (newRolesMap.containsKey(userId)) {
 
                 RoleType newRole = newRolesMap.get(userId);
 
-                //Only update role if changed
+                // Update role only (DO NOT TOUCH MESSAGE)
                 if (existing.getRole() != newRole) {
                     existing.setRole(newRole);
                 }
 
-                //DO NOT TOUCH isViewed
-                // Remove processed
                 newRolesMap.remove(userId);
 
             } else {
@@ -104,32 +91,47 @@ public class FormAccessService {
             }
         }
 
-        // Add new users
+        // HANDLE NEW USERS
         for (Map.Entry<UUID, RoleType> entry : newRolesMap.entrySet()) {
-            UserFormRole newRole = new UserFormRole();
-            newRole.setUserId(entry.getKey());
-            newRole.setFormId(formId);
-            newRole.setRole(entry.getValue());
-            newRole.setViewed(false); //only new users
 
+            UserFormRole newRole = new UserFormRole();
+
+            User user = userRepo.findById(entry.getKey())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Form form = new Form();
+            form.setId(formId);
+
+            newRole.setUser(user);
+            newRole.setForm(form);
+            newRole.setRole(entry.getValue());
+            newRole.setViewed(false);
+
+            //  JUST STORE MESSAGE
+            String message = null;
+            if (dto.getAccess().getMessage() != null && !dto.getAccess().getMessage().isEmpty()) {
+                message = dto.getAccess().getMessage().get(0);
+            }
+            newRole.setMessage(message);
             newEntities.add(newRole);
         }
 
-        //Apply DB changes
+        // DELETE removed users
         if (!toDelete.isEmpty()) {
             roleRepo.deleteAll(toDelete);
         }
 
+        // SAVE new users
         if (!newEntities.isEmpty()) {
             roleRepo.saveAll(newEntities);
         }
     }
 
-    //GET SHARED FORMS
+    // GET SHARED FORMS
     public Map<String, List<UserFormRole>> getSharedForms(UUID userId) {
 
-        List<UserFormRole> newForms = roleRepo.findByUserIdAndIsViewedFalse(userId);
-        List<UserFormRole> viewedForms = roleRepo.findByUserIdAndIsViewedTrue(userId);
+        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
+        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
 
         // mark new as viewed
         newForms.forEach(f -> f.setViewed(true));
@@ -142,6 +144,7 @@ public class FormAccessService {
         return response;
     }
 
+    // HELPERS
     private User getUser(String username) {
         User user = userRepo.findByUsername(username);
         if (user == null) {
@@ -156,7 +159,7 @@ public class FormAccessService {
         return user.getUserId();
     }
 
-
+    // GET ACCESS
     public FormAccessDTO getAccess(UUID formId) {
 
         List<UserFormRole> roles = roleRepo.findByFormId(formId);
@@ -169,13 +172,10 @@ public class FormAccessService {
         List<String> editors = new ArrayList<>();
         List<String> responders = new ArrayList<>();
         List<String> viewers = new ArrayList<>();
-        List<String> responseViewers = new ArrayList<>();
 
         for (UserFormRole role : roles) {
 
-            User user = userRepo.findById(role.getUserId())
-                    .orElse(null);
-
+            User user = role.getUser();
             if (user == null) continue;
 
             switch (role.getRole()) {
@@ -183,16 +183,12 @@ public class FormAccessService {
                 case EDITOR -> editors.add(user.getUsername());
                 case RESPONDER -> responders.add(user.getUsername());
                 case VIEWER -> viewers.add(user.getUsername());
-                case RESPONSE_VIEWER -> responseViewers.add(user.getUsername());
-
             }
         }
 
         access.setEditor(editors);
         access.setResponder(responders);
         access.setViewer(viewers);
-        access.setResponseViewer(responseViewers);
-
         dto.setAccess(access);
 
         return dto;
