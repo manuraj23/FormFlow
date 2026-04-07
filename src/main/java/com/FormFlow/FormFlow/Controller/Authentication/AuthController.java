@@ -36,6 +36,22 @@ public class AuthController {
     @Autowired
     private RefreshTokenService refreshTokenService;
 
+    //Check username and Email exist in DB or not
+
+    @Operation(summary = "Check if username already exists")
+    @PostMapping("/usernameCheck")
+    public ResponseEntity<?> usernameCheck(@RequestBody String userName) {
+        boolean exists = authService.usernameCheck(userName);
+        return ResponseEntity.ok(Map.of("available", !exists));
+    }
+
+    @Operation(summary = "Check if email already exists")
+    @PostMapping("/emailCheck")
+    public ResponseEntity<?> emailCheck(@RequestBody String email) {
+        boolean exists = authService.emailCheck(email);
+        return ResponseEntity.ok(Map.of("available", !exists));
+    }
+
     // SignUp Section
 
     @Operation(summary = "Signup Method")
@@ -73,7 +89,7 @@ public class AuthController {
 
     @Operation(summary = "Resend OTP for account verification")
     @PostMapping("/resendOtpVerifyaccount")
-    public ResponseEntity<?> resendOtp(@RequestParam String email) {
+    public ResponseEntity<?> resendOtp(@RequestBody String email) {
         authService.resendOtpVerifyAccount(email);
         return ResponseEntity.ok(Map.of(
                 "message", "OTP resent successfully to " + email,
@@ -147,7 +163,7 @@ public class AuthController {
 
     @Operation(summary = "Resend OTP for password reset")
     @PostMapping("/resendOtpResetPassword")
-    public ResponseEntity<?> resendOtpResetPassword(@RequestParam String email) {
+    public ResponseEntity<?> resendOtpResetPassword(@RequestBody String email) {
         authService.resendOtpResetPassword(email);
         return ResponseEntity.ok(Map.of(
                 "message", "OTP resent successfully to " + email,
