@@ -1,4 +1,4 @@
-CREATE TABLE user_form_roles (
+CREATE TABLE IF NOT EXISTS user_form_roles (
                                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
                                  user_id UUID NOT NULL,

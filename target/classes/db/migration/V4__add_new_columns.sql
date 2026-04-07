@@ -1,3 +1,0 @@
-ALTER TABLE form_fields ADD COLUMN field_style JSONB;
-ALTER TABLE forms ADD COLUMN settings JSONB;
-ALTER TABLE forms ADD COLUMN theme VARCHAR(255);

@@ -9,10 +9,25 @@
 ## API endpoints:
 
 ### Authentication APIs:
+
+- existing username check -- http://localhost:8082/formflow/auth/usernameCheck  (post)
+- existing email check -- http://localhost:8082/formflow/auth/emailCheck  (post)
+
+- signup -- http://localhost:8082/formflow/auth/login  (post)
+- verify Account -- http://localhost:8082/formflow/auth/verifyAccount  (post)
+- Resend OTP for account verification -- http://localhost:8082/formflow/auth/resendOtpVerifyaccount  (post)
+
 - login -- http://localhost:8082/formflow/auth/login  (post)
-- register -- http://localhost:8082/formflow/auth/register  (post)
-- logut -- http://localhost:8082/formflow/auth/logout  (post)
 - refresh Token -- http://localhost:8082/formflow/auth/refresh  (post)
+
+- forget password -- http://localhost:8082/formflow/auth/forgotPassword (post)
+- Resend OTP for forget password -- http://localhost:8082/formflow/auth/resendOtpResetPassword  (post)
+- verify OTP for forget password -- http://localhost:8082/formflow/auth/verifyResetOtp  (post)
+- reset password -- http://localhost:8082/formflow/auth/resetPassword  (post)
+
+- logout -- http://localhost:8082/formflow/auth/logout  (post)
+
+
 
 ### User APIs--  
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)

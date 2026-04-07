@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -53,6 +54,16 @@ public class AuthService {
 
     private static final PasswordEncoder passwordEncoder= new BCryptPasswordEncoder();
 
+    public boolean usernameCheck(String userName) {
+        return userRepository.existsByUsername(userName);
+    }
+
+    public boolean emailCheck(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+
+    //Login Section
     public AuthResponseDTO loginNew(NewLoginDTO newLoginDTO) {
         String identifier = normalizeIdentifier(newLoginDTO.getIdentifier());
         if (identifier == null || identifier.isBlank()) {
@@ -88,6 +99,9 @@ public class AuthService {
         return trimmed;
     }
 
+
+    //Signup Section
+
     @Transactional
     public void saveNewUserNew(SignUpDTOnew signUpDTOnew) {
         if(userRepository.existsByUsername(signUpDTOnew.getUsername()))
@@ -96,8 +110,20 @@ public class AuthService {
         if(userRepository.existsByEmail(signUpDTOnew.getEmail()))
             throw new IllegalStateException("Email already exists");
 
-        if(tempUserRepository.existsByEmail(signUpDTOnew.getEmail()))
-            throw new IllegalStateException("OTP already sent. Verify email.");
+        if(tempUserRepository.existsByEmail(signUpDTOnew.getEmail())){
+            TempUser tempUser=tempUserRepository.findByEmail(signUpDTOnew.getEmail()).orElseThrow();
+            tempUser.setEmail(signUpDTOnew.getEmail());
+            tempUser.setUsername(signUpDTOnew.getUsername());
+            tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
+            String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+            tempUser.setOtp(otp);
+            tempUser.setOtpAttempts(0);
+            tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+            tempUser.setCreatedAt(LocalDateTime.now());
+            tempUserRepository.save(tempUser);
+            varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
+            return;
+        }
 
         String otp = String.valueOf(new Random().nextInt(900000) + 100000);
 
@@ -107,13 +133,83 @@ public class AuthService {
         tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
         tempUser.setOtp(otp);
         tempUser.setOtpAttempts(0);
-        tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+        tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         tempUser.setCreatedAt(LocalDateTime.now());
         tempUserRepository.save(tempUser);
 
         varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
     }
 
+//    @Transactional
+//    public void saveNewUserNew(SignUpDTOnew signUpDTOnew) {
+//
+//        if(userRepository.existsByUsername(signUpDTOnew.getUsername()))
+//            throw new IllegalStateException("Username already exists");
+//
+//        if(userRepository.existsByEmail(signUpDTOnew.getEmail()))
+//            throw new IllegalStateException("Email already exists");
+//
+//        Optional<TempUser> existing = tempUserRepository.findByEmail(signUpDTOnew.getEmail());
+//
+//        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+//
+//        if(existing.isPresent()){
+//            TempUser tempUser = existing.get();
+//
+//            // 🔒 Rate limiting
+//            if(tempUser.getCreatedAt() != null &&
+//                    tempUser.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(30))) {
+//                throw new IllegalStateException("Please wait 30 seconds before requesting another OTP");
+//            }
+//
+//            // ✅ Check expiry BEFORE updating
+//            boolean expired = tempUser.getOtpExpiry() != null &&
+//                    tempUser.getOtpExpiry().isBefore(LocalDateTime.now());
+//
+//            if(expired) {
+//                tempUser.setOtpAttempts(0);
+//            }
+//
+//            tempUser.setEmail(signUpDTOnew.getEmail());
+//            tempUser.setUsername(signUpDTOnew.getUsername());
+//            tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
+//            tempUser.setOtp(otp);
+//            tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+//            tempUser.setCreatedAt(LocalDateTime.now());
+//
+//            tempUserRepository.save(tempUser);
+//            varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
+//            return;
+//        }
+//
+//        TempUser tempUser = new TempUser();
+//        tempUser.setEmail(signUpDTOnew.getEmail());
+//        tempUser.setUsername(signUpDTOnew.getUsername());
+//        tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
+//        tempUser.setOtp(otp);
+//        tempUser.setOtpAttempts(0);
+//        tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+//        tempUser.setCreatedAt(LocalDateTime.now());
+//        tempUserRepository.save(tempUser);
+//        varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
+//    }
+
+    public void resendOtpVerifyAccount(String email) {
+        TempUser tempUser = tempUserRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if(tempUser.getOtpAttempts() >= 5){
+            tempUserRepository.deleteByEmail(email);
+            throw new IllegalStateException("Max OTP attempts reached. Sign up again.");
+        }
+        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+        tempUser.setOtp(otp);
+        tempUser.setOtpAttempts(0);
+        tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        tempUserRepository.save(tempUser);
+        varifyAccountEmailService.sendOtp(email, otp);
+    }
+
+    @Transactional
     public AuthResponseDTO verifyAccount(VarifyAccountDTO varifyAccountDTO) {
         TempUser tempUser = tempUserRepository.findByEmail(varifyAccountDTO.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -146,6 +242,8 @@ public class AuthService {
         return new AuthResponseDTO(accessToken, refreshToken.getToken());
     }
 
+
+    //Forget-Password Section
     public String forgotPassword(String identifier) {
         String normalizedIdentifier = normalizeIdentifier(identifier);
         if (normalizedIdentifier == null || normalizedIdentifier.isBlank()) {
@@ -240,5 +338,24 @@ public class AuthService {
         String accessToken = jwtUtil.generateToken(user.getUsername(), user.getRoles());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
         return new AuthResponseDTO(accessToken, refreshToken.getToken());
+    }
+
+    public void resendOtpResetPassword(String email) {
+        PasswordResetTemp temp = passwordResetTempRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("OTP not requested"));
+
+        if(temp.getOtpAttempts() >= 5){
+            passwordResetTempRepository.deleteByEmail(email);
+            throw new IllegalStateException("Max OTP attempts reached. Move to Forget password page");
+        }
+
+        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+        temp.setOtp(otp);
+        temp.setOtpAttempts(0);
+        temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        temp.setVerified(false);
+        passwordResetTempRepository.save(temp);
+        resetPasswordEmailService.sendOtp(email, otp);
     }
 }

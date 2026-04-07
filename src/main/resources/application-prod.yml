@@ -47,5 +47,5 @@ file:
 
 logging:
   level:
-    org.flywaydb: ${LOGGING_LEVEL_ORG_FLYWAYDB}
-    org.springframework.boot.autoconfigure.flyway: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE_FLYWAY}
+    org.flywaydb: ${LOGGING_LEVEL_ORG_FLYWAYDB:INFO}
+    org.springframework.boot.autoconfigure.flyway: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE_FLYWAY:INFO}

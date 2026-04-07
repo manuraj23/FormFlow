@@ -17,10 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
@@ -38,7 +36,25 @@ public class AuthController {
     @Autowired
     private RefreshTokenService refreshTokenService;
 
-    @Operation(summary = "New Signup Method")
+    //Check username and Email exist in DB or not
+
+    @Operation(summary = "Check if username already exists")
+    @PostMapping("/usernameCheck")
+    public ResponseEntity<?> usernameCheck(@RequestBody String userName) {
+        boolean exists = authService.usernameCheck(userName);
+        return ResponseEntity.ok(Map.of("available", !exists));
+    }
+
+    @Operation(summary = "Check if email already exists")
+    @PostMapping("/emailCheck")
+    public ResponseEntity<?> emailCheck(@RequestBody String email) {
+        boolean exists = authService.emailCheck(email);
+        return ResponseEntity.ok(Map.of("available", !exists));
+    }
+
+    // SignUp Section
+
+    @Operation(summary = "Signup Method")
     @PostMapping("/signup")
     public ResponseEntity<?>newSignUP(@RequestBody SignUpDTOnew signUpDTOnew){
         try{
@@ -55,9 +71,9 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "Varify Account using OTP")
-    @PostMapping("/varifyaccount")
-    public ResponseEntity<?>varifyAccount(@RequestBody VarifyAccountDTO varifyAccountDTO){
+    @Operation(summary = "Verify Account using OTP")
+    @PostMapping("/verifyAccount")
+    public ResponseEntity<?>verifyAccount(@RequestBody VarifyAccountDTO varifyAccountDTO){
         try{
             AuthResponseDTO response =authService.verifyAccount(varifyAccountDTO);
             return ResponseEntity.ok(response);
@@ -70,6 +86,19 @@ public class AuthController {
         }
 
     }
+
+    @Operation(summary = "Resend OTP for account verification")
+    @PostMapping("/resendOtpVerifyaccount")
+    public ResponseEntity<?> resendOtp(@RequestBody String email) {
+        authService.resendOtpVerifyAccount(email);
+        return ResponseEntity.ok(Map.of(
+                "message", "OTP resent successfully to " + email,
+                "email", email
+        ));
+    }
+
+
+    //Login Section
 
     @Operation(summary = "Login using Username or Email")
     @PostMapping("/login")
@@ -101,6 +130,9 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponseDTO(accessToken, refreshToken.getToken()));
     }
 
+
+    //Logout Section
+
     @Operation(summary = "Logout a user by invalidating their refresh token")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestBody LogoutDTO logoutDTO) {
@@ -114,8 +146,10 @@ public class AuthController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
+
+    //Forget-Password Section
     @Operation(summary = "Forget Password - Send OTP to registered email")
-    @PostMapping("/forgot-password")
+    @PostMapping("/forgotPassword")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDTO dto){
         try {
             String email=authService.forgotPassword(dto.getIdentifier());
@@ -127,8 +161,18 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Resend OTP for password reset")
+    @PostMapping("/resendOtpResetPassword")
+    public ResponseEntity<?> resendOtpResetPassword(@RequestBody String email) {
+        authService.resendOtpResetPassword(email);
+        return ResponseEntity.ok(Map.of(
+                "message", "OTP resent successfully to " + email,
+                "email", email
+        ));
+    }
+
     @Operation(summary = "Verify OTP for password reset")
-    @PostMapping("/verify-reset-otp")
+    @PostMapping("/verifyResetOtp")
     public ResponseEntity<?> verifyResetOtp(@RequestBody VerifyResetOtpDTO dto){
         try {
             authService.verifyResetOtp(dto.getEmail(), dto.getOtp());
@@ -141,7 +185,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Reset Password entering new password")
-    @PostMapping("/reset-password")
+    @PostMapping("/resetPassword")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto){
         try {
             AuthResponseDTO response = authService.resetPassword(dto.getEmail(), dto.getNewPassword());

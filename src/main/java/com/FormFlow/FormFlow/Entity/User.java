@@ -27,6 +27,7 @@ public class User {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @Column(nullable = false, unique = true)
     private String email;
 
     @ElementCollection(fetch = FetchType.EAGER)
