@@ -193,4 +193,12 @@ public class FormAccessService {
 
         return dto;
     }
+
+    public String getUsernameByEmail(String email) {
+
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        return user.getUsername();
+    }
 }

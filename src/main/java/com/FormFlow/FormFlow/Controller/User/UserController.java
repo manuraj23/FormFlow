@@ -140,4 +140,11 @@ public class UserController {
         return formAccessService.getAccess(formId);
     }
 
+    @GetMapping("/username-by-email")
+    public ResponseEntity<?> getUsernameByEmail(@RequestParam String email) {
+
+        String username = formAccessService.getUsernameByEmail(email);
+
+        return ResponseEntity.ok(username);
+    }
 }
