@@ -31,7 +31,7 @@ public class SpringSecurity {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/auth/**","/swagger-ui/**","/swagger-ui.html","/v3/api-docs/**","/api/responses/**","/public/**","/uploads/**").permitAll()
                         .requestMatchers("/user/**").authenticated()
-                        .requestMatchers("/admin/**").authenticated()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()
                 );
 
