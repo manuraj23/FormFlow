@@ -477,7 +477,9 @@ public class ResponseService {
     private FormResponseDTO mapToDTO(FormResponse entity) {
         FormResponseDTO dto = new FormResponseDTO();
         dto.setResponseId(entity.getResponseId());
-        dto.setFormId(entity.getFormId());
+        Form form = new Form();
+        form.setId(dto.getFormId());
+        entity.setForm(form);
         dto.setResponse(entity.getResponse());
         dto.setSubmittedAt(entity.getSubmittedAt());
         return dto;
@@ -486,7 +488,7 @@ public class ResponseService {
     private FormResponse mapToEntity(FormResponseDTO dto) {
         FormResponse entity = new FormResponse();
         entity.setResponseId(dto.getResponseId());
-        entity.setFormId(dto.getFormId());
+        dto.setFormId(entity.getForm().getId());
         entity.setResponse(dto.getResponse());
         entity.setSubmittedAt(dto.getSubmittedAt());
         return entity;

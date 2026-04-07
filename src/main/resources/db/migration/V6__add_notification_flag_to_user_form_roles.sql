@@ -1,0 +1,2 @@
+ALTER TABLE user_form_roles
+    ADD COLUMN IF NOT EXISTS message VARCHAR(50) DEFAULT FALSE;
