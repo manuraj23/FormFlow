@@ -478,9 +478,10 @@ public class ResponseService {
     private FormResponseDTO mapToDTO(FormResponse entity) {
         FormResponseDTO dto = new FormResponseDTO();
         dto.setResponseId(entity.getResponseId());
-        Form form = new Form();
+        /*Form form = new Form();
         form.setId(dto.getFormId());
-        entity.setForm(form);
+        entity.setForm(form);*/
+        dto.setFormId(entity.getForm().getId());
         dto.setResponse(entity.getResponse());
         dto.setSubmittedAt(entity.getSubmittedAt());
         return dto;
@@ -489,7 +490,10 @@ public class ResponseService {
     private FormResponse mapToEntity(FormResponseDTO dto) {
         FormResponse entity = new FormResponse();
         entity.setResponseId(dto.getResponseId());
-        dto.setFormId(entity.getForm().getId());
+        // dto.setFormId(entity.getForm().getId());
+        Form form = formRepository.findById(dto.getFormId())
+                .orElseThrow(() -> new RuntimeException("Form not found with id: " + dto.getFormId()));
+        entity.setForm(form);
         entity.setResponse(dto.getResponse());
         entity.setSubmittedAt(dto.getSubmittedAt());
         return entity;
