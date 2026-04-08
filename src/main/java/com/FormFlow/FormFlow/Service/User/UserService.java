@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -118,9 +119,20 @@ public class UserService {
         }
 
         form.setTitle(dto.getTitle() != null ? dto.getTitle() : form.getTitle());
+        form.setTheme(dto.getTheme() != null ? dto.getTheme() : form.getTheme());
         form.setDescription(dto.getDescription() != null ? dto.getDescription() : form.getDescription());
         form.setPublished(dto.isPublished());
-
+        form.setSettings(dto.getSettings() != null ? dto.getSettings() : form.getSettings());
+        if (dto.getSettings() != null) {
+            Object deadlineObj = dto.getSettings().get("deadline");
+            if (deadlineObj != null) {
+                try {
+                    Instant.parse(deadlineObj.toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("Invalid deadline format. Expected UTC ISO-8601");
+                }
+            }
+        }
         if (form.getSections() != null) {
             form.getSections().clear(); // Hibernate tracks these as orphans now
         } else {
@@ -149,7 +161,9 @@ public class UserService {
                     );
                 }
                 field.setFieldOrder(fieldDTO.getFieldOrder());
+
                 field.setFieldConfig(fieldDTO.getFieldConfig() != null ? fieldDTO.getFieldConfig() : Collections.emptyMap());
+                field.setFieldStyle(fieldDTO.getFieldStyle() != null ? fieldDTO.getFieldStyle() : Collections.emptyMap());
                 field.setSection(section);
                 fields.add(field);
             }

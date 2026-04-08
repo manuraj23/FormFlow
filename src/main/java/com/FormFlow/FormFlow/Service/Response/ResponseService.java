@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -138,11 +139,11 @@ public class ResponseService {
         Object deadlineObj = settings.get("deadline");
         if (deadlineObj != null) {
             try {
-                LocalDateTime deadline = LocalDateTime.parse(deadlineObj.toString());
-
-                if (LocalDateTime.now().isAfter(deadline)) {
+                Instant deadline = Instant.parse(deadlineObj.toString());
+                if (Instant.now().isAfter(deadline)) {
                     throw new RuntimeException("Form submission deadline has passed");
                 }
+
             }catch (RuntimeException e) {
                 throw e;
             }  catch (Exception e) {
@@ -494,3 +495,4 @@ public class ResponseService {
         return entity;
     }
 }
+
