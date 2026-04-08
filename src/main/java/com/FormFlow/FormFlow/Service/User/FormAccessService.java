@@ -172,11 +172,17 @@ public class FormAccessService {
         List<String> editors = new ArrayList<>();
         List<String> responders = new ArrayList<>();
         List<String> viewers = new ArrayList<>();
+        List<String> messages = new ArrayList<>(); // ✅ NEW
+
 
         for (UserFormRole role : roles) {
 
             User user = role.getUser();
             if (user == null) continue;
+
+            if (role.getMessage() != null) {
+                messages.add(role.getMessage());
+            }
 
             switch (role.getRole()) {
                 case OWNER -> dto.setOwner(user.getUsername());
@@ -190,7 +196,7 @@ public class FormAccessService {
         access.setResponder(responders);
         access.setViewer(viewers);
         dto.setAccess(access);
-
+        access.setMessage(messages);
         return dto;
     }
 
