@@ -107,8 +107,8 @@ public class FormAccessService {
             newRole.setForm(form);
             newRole.setRole(entry.getValue());
             newRole.setViewed(false);
-            newRole.setAssignedAt(dto.getAssignedAt());
-
+            newRole.setAssignedAt(LocalDateTime.now());
+            
             //  JUST STORE MESSAGE
             String message = null;
             if (dto.getAccess().getMessage() != null && !dto.getAccess().getMessage().isEmpty()) {
