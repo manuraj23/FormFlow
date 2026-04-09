@@ -39,10 +39,10 @@ public class FormAccessService {
 
         Map<UUID, RoleType> newRolesMap = new HashMap<>();
 
-        // OWNER
-        User owner = userRepo.findByUsername(dto.getOwner());
-        if (owner == null) throw new RuntimeException("Owner not found");
-        newRolesMap.put(owner.getUserId(), RoleType.OWNER);
+//        // OWNER
+//        User owner = userRepo.findByUsername(dto.getOwner());
+//        if (owner == null) throw new RuntimeException("Owner not found");
+//        newRolesMap.put(owner.getUserId(), RoleType.OWNER);
 
         // EDITOR
         if (dto.getAccess().getEditor() != null) {
@@ -168,23 +168,6 @@ public class FormAccessService {
         return dto;
     }
 
-    private void injectFormName(List<UserFormRole> roles) {
-        for (UserFormRole role : roles) {
-            if (role.getForm() != null) {
-                String formName = role.getForm().getTitle(); // or getName()
-
-                // combine with message
-                String message = role.getMessage();
-
-                if (message != null) {
-                    role.setMessage("Form: " + formName + " | " + message);
-                } else {
-                    role.setMessage("Form: " + formName);
-                }
-            }
-        }
-    }
-
     // HELPERS
     private User getUser(String username) {
         User user = userRepo.findByUsername(username);
@@ -225,7 +208,7 @@ public class FormAccessService {
             }
 
             switch (role.getRole()) {
-                case OWNER -> dto.setOwner(user.getUsername());
+//                case OWNER -> dto.setOwner(user.getUsername());
                 case EDITOR -> editors.add(user.getUsername());
                 case RESPONDER -> responders.add(user.getUsername());
                 case VIEWER -> viewers.add(user.getUsername());

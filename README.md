@@ -40,6 +40,10 @@
 - get all trash form -- http://localhost:8082/formflow/user/form/trash  (get)
 - restore form from trash -- http://localhost:8082/formflow/user/form/restoreFromTrash/{id}  (patch) id is form-id
 - update form Details by id -- http://localhost:8082/formflow/user/updateForm/{id}  (put) id is form-id
+- give/update access -- http://localhost:8082/formflow/user/save (post) 
+- get all access of form -- http://localhost:8082/formflow/user/access/{id} id is form-id
+- get shared access form -- http://localhost:8082/formflow/user/shared-forms (get)
+- get name by email -- http://localhost:8082/formflow/user/username-by-email?email={mail} mail is existing email
 
 ### public APIs--for form Data
 - get form by id -- http://localhost:8082/formflow/public/form/{id}  (get) id is form-id
