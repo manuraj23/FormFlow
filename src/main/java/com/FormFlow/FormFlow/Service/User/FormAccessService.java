@@ -1,6 +1,7 @@
 package com.FormFlow.FormFlow.Service.User;
 
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
+import com.FormFlow.FormFlow.DTO.User.FormAccessShareDTO;
 import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Entity.UserFormRole;
@@ -130,20 +131,58 @@ public class FormAccessService {
     }
 
     // GET SHARED FORMS
-    public Map<String, List<UserFormRole>> getSharedForms(UUID userId) {
+    public Map<String, List<FormAccessShareDTO>> getSharedForms(UUID userId) {
 
         List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
         List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
+
+        List<FormAccessShareDTO> newDTO = newForms.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+
+        List<FormAccessShareDTO> viewedDTO = viewedForms.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
 
         // mark new as viewed
         newForms.forEach(f -> f.setViewed(true));
         roleRepo.saveAll(newForms);
 
-        Map<String, List<UserFormRole>> response = new HashMap<>();
-        response.put("newForms", newForms);
-        response.put("otherForms", viewedForms);
+        Map<String, List<FormAccessShareDTO>> response = new HashMap<>();
+        response.put("newForms", newDTO);
+        response.put("otherForms", viewedDTO);
 
         return response;
+    }
+
+    private FormAccessShareDTO mapToDTO(UserFormRole role) {
+        FormAccessShareDTO dto = new FormAccessShareDTO();
+
+        dto.setFormId(role.getForm().getId());
+        dto.setFormName(role.getForm().getTitle());
+        dto.setRole(role.getRole());
+        dto.setAssignedAt(role.getAssignedAt());
+        dto.setMessage(role.getMessage());
+        dto.setViewed(role.isViewed());
+
+        return dto;
+    }
+
+    private void injectFormName(List<UserFormRole> roles) {
+        for (UserFormRole role : roles) {
+            if (role.getForm() != null) {
+                String formName = role.getForm().getTitle(); // or getName()
+
+                // combine with message
+                String message = role.getMessage();
+
+                if (message != null) {
+                    role.setMessage("Form: " + formName + " | " + message);
+                } else {
+                    role.setMessage("Form: " + formName);
+                }
+            }
+        }
     }
 
     // HELPERS
