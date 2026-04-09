@@ -2,6 +2,7 @@ package com.FormFlow.FormFlow.DTO.User;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,7 +11,7 @@ public class FormAccessDTO {
 
     private UUID formId;
     private String owner;
-
+    private LocalDateTime assignedAt;
     private Access access;
 
     @Data

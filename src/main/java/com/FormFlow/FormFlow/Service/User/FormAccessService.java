@@ -10,6 +10,7 @@ import com.FormFlow.FormFlow.Repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -106,6 +107,7 @@ public class FormAccessService {
             newRole.setForm(form);
             newRole.setRole(entry.getValue());
             newRole.setViewed(false);
+            newRole.setAssignedAt(dto.getAssignedAt());
 
             //  JUST STORE MESSAGE
             String message = null;
@@ -172,8 +174,7 @@ public class FormAccessService {
         List<String> editors = new ArrayList<>();
         List<String> responders = new ArrayList<>();
         List<String> viewers = new ArrayList<>();
-        List<String> messages = new ArrayList<>(); // ✅ NEW
-
+        List<String> messages = new ArrayList<>();
 
         for (UserFormRole role : roles) {
 
