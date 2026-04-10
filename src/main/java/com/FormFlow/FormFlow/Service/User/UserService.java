@@ -5,14 +5,12 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
 import com.FormFlow.FormFlow.Entity.*;
-import com.FormFlow.FormFlow.Repository.FormRepository;
-import com.FormFlow.FormFlow.Repository.FormSectionRepository;
-import com.FormFlow.FormFlow.Repository.UserRepository;
+import com.FormFlow.FormFlow.Repository.*;
 import com.FormFlow.FormFlow.enums.FieldType;
+import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,6 +32,9 @@ public class UserService {
 
     @Autowired
     private FormResponseRepository formResponseRepository;
+
+    @Autowired
+    private UserFormRoleRepository userFormRoleRepository;
 
     public void createForm(FormCreateDTO dto, String username) {
 
@@ -89,7 +90,7 @@ public class UserService {
         List<Form>forms = formRepository.findFormsByUsernameWithSections(username);
 
         forms = forms.stream().filter(form -> !form.isDeleted()).toList();
-        
+
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
@@ -105,10 +106,15 @@ public class UserService {
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found with id: " + formId));
 
-        if (!form.getUser().getUsername().equals(username)) {
+        boolean isEditor = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.EDITOR)
+                .orElse(false);
+
+        boolean isOwner = form.getUser().getUsername().equals(username);
+        if (!(isEditor || isOwner)) {
             throw new RuntimeException("Unauthorized to update this form");
         }
-
         List<FormResponse> responses = formResponseRepository.findByFormId(formId);
         if (responses != null && !responses.isEmpty()) {
             return false; // Version control required
@@ -185,9 +191,22 @@ public class UserService {
     @Transactional(readOnly = true)
     public FormGetDTO getFormById(String username, UUID id) {
 
-        Form form = formRepository.findFormByIdAndUsername(id, username)
-                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        boolean isEditor = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.EDITOR)
+                .orElse(false);
 
+        boolean isViewer = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.VIEWER)
+                .orElse(false);
+
+        boolean isOwner = form.getUser().getUsername().equals(username);
+        if (!(isEditor || isOwner || isViewer)) {
+            throw new RuntimeException("Unauthorized to update this form");
+        }
         if(form.isDeleted()) {
             throw new RuntimeException("Form not found or not authorized");
         }

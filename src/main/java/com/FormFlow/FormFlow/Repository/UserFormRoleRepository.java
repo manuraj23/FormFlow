@@ -4,6 +4,7 @@ import com.FormFlow.FormFlow.Entity.UserFormRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserFormRoleRepository extends JpaRepository<UserFormRole, UUID> {
@@ -14,6 +15,7 @@ public interface UserFormRoleRepository extends JpaRepository<UserFormRole, UUID
 
     List<UserFormRole> findByUser_UserIdAndIsViewedFalseAndForm_IsDeletedFalse(UUID userId);
     List<UserFormRole> findByUser_UserIdAndIsViewedTrueAndForm_IsDeletedFalse(UUID userId);
+    Optional<UserFormRole> findByUser_UsernameAndForm_Id(String username, UUID formId);
 //    List<UserFormRole> findByUser_UserIdAndIsViewedFalse(UUID userId);
 //    List<UserFormRole> findByUser_UserIdAndIsViewedTrue(UUID userId);
 }
