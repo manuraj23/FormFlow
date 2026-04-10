@@ -40,4 +40,7 @@ public class UserFormRole {
 
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
+
+    @Column(name = "assigned_by")
+    private String assignedBy;
 }

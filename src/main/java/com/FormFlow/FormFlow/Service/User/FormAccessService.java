@@ -109,7 +109,9 @@ public class FormAccessService {
             newRole.setRole(entry.getValue());
             newRole.setViewed(false);
             newRole.setAssignedAt(LocalDateTime.now());
-            
+            newRole.setAssignedBy(dto.getOwner());
+
+
             //  JUST STORE MESSAGE
             String message = null;
             if (dto.getAccess().getMessage() != null && !dto.getAccess().getMessage().isEmpty()) {
@@ -166,7 +168,7 @@ public class FormAccessService {
         dto.setAssignedAt(role.getAssignedAt());
         dto.setMessage(role.getMessage());
         dto.setViewed(role.isViewed());
-
+        dto.setAssignedBy(role.getAssignedBy());
         return dto;
     }
 

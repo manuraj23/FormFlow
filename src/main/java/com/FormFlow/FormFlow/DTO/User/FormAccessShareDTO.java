@@ -14,6 +14,7 @@ public class FormAccessShareDTO {
     private String formName;
     private RoleType role;
     private LocalDateTime assignedAt;
+    private String assignedBy;
     private String message;
     private boolean viewed;
 }
