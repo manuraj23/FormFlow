@@ -133,8 +133,10 @@ public class FormAccessService {
     // GET SHARED FORMS
     public Map<String, List<FormAccessShareDTO>> getSharedForms(UUID userId) {
 
-        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
-        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
+        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalseAndForm_IsDeletedFalse(userId);
+        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrueAndForm_IsDeletedFalse(userId);
+//        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
+//        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
 
         List<FormAccessShareDTO> newDTO = newForms.stream()
                 .map(this::mapToDTO)
