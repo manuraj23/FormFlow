@@ -51,4 +51,8 @@ public class Form {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    private int versionId;
+    private UUID mainParentId;
+
 }

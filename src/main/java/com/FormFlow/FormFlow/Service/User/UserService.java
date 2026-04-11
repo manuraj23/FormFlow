@@ -4,6 +4,7 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FieldDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.Version.VersionResponseDTO;
 import com.FormFlow.FormFlow.Entity.*;
 import com.FormFlow.FormFlow.Repository.*;
 import com.FormFlow.FormFlow.enums.FieldType;
@@ -11,12 +12,10 @@ import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -47,7 +46,24 @@ public class UserService {
         form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
+        if(dto.getMainParentId() != null){
+            form.setMainParentId(dto.getMainParentId());
+            Integer maxVersion = formRepository
+                    .findMaxVersionByParentId(dto.getMainParentId());
+            form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
+            if(form.getVersionId() == 2){
 
+            }
+            Form latest = formRepository
+                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
+            if (latest != null) {
+                latest.setPublished(false);
+                formRepository.save(latest);
+            }
+
+        }else{
+            form.setVersionId(1);
+        }
         if (dto.getSections() != null) {
             form.setSections(dto.getSections().stream().map(sectionDTO -> {
 
@@ -83,6 +99,11 @@ public class UserService {
         }
 
         formRepository.save(form);
+        if(form.getVersionId() == 1) {
+            form.setMainParentId(form.getId());
+            formRepository.save(form);
+        }
+
     }
 
     @Transactional(readOnly = true)
@@ -314,6 +335,44 @@ public class UserService {
         }
         form.setDeleted(false);
         formRepository.save(form);
+    }
+
+    public List<VersionResponseDTO> getVersions(UUID formId) {
+        // Get form
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+
+        //  Get versions
+        List<Form> forms = formRepository.findByMainParentIdOrderByVersionIdDesc(formId);
+
+        // Convert to DTO
+        return forms.stream().map(v -> {
+            VersionResponseDTO dto = new VersionResponseDTO();
+            dto.setVersionId(v.getVersionId());
+            dto.setFormName(v.getTitle());
+            dto.setFormId(v.getId());
+            return dto;
+        }).toList();
+    }
+
+    @Transactional
+    public void switchVersion(UUID formId, int versionId, String username) {
+
+        Form current = formRepository.findFormByIdAndUsername(formId, username)
+                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+
+        UUID parentId = current.getMainParentId();
+
+        // deactivate all versions
+        formRepository.deactivateAllVersions(parentId);
+
+        // directly fetch selected version (NO STREAM)
+        Form selected = formRepository.findByMainParentIdAndVersionId(parentId, versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+
+        selected.setPublished(true);
+
+        formRepository.save(selected);
     }
 
 }
