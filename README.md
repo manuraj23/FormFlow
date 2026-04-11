@@ -13,7 +13,7 @@
 - existing username check -- http://localhost:8082/formflow/auth/usernameCheck  (post)
 - existing email check -- http://localhost:8082/formflow/auth/emailCheck  (post)
 
-- signup -- http://localhost:8082/formflow/auth/login  (post)
+- signup -- http://localhost:8082/formflow/auth/signup  (post)
 - verify Account -- http://localhost:8082/formflow/auth/verifyAccount  (post)
 - Resend OTP for account verification -- http://localhost:8082/formflow/auth/resendOtpVerifyaccount  (post)
 
