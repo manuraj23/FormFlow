@@ -4,21 +4,18 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FieldDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.Version.VersionResponseDTO;
 import com.FormFlow.FormFlow.Entity.*;
-import com.FormFlow.FormFlow.Repository.FormRepository;
-import com.FormFlow.FormFlow.Repository.FormSectionRepository;
-import com.FormFlow.FormFlow.Repository.UserRepository;
+import com.FormFlow.FormFlow.Repository.*;
 import com.FormFlow.FormFlow.enums.FieldType;
+import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.FormFlow.FormFlow.Repository.FormResponseRepository;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -35,6 +32,9 @@ public class UserService {
     @Autowired
     private FormResponseRepository formResponseRepository;
 
+    @Autowired
+    private UserFormRoleRepository userFormRoleRepository;
+
     public void createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
@@ -46,7 +46,24 @@ public class UserService {
         form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
+        if(dto.getMainParentId() != null){
+            form.setMainParentId(dto.getMainParentId());
+            Integer maxVersion = formRepository
+                    .findMaxVersionByParentId(dto.getMainParentId());
+            form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
+            if(form.getVersionId() == 2){
 
+            }
+            Form latest = formRepository
+                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
+            if (latest != null) {
+                latest.setPublished(false);
+                formRepository.save(latest);
+            }
+
+        }else{
+            form.setVersionId(1);
+        }
         if (dto.getSections() != null) {
             form.setSections(dto.getSections().stream().map(sectionDTO -> {
 
@@ -82,6 +99,11 @@ public class UserService {
         }
 
         formRepository.save(form);
+        if(form.getVersionId() == 1) {
+            form.setMainParentId(form.getId());
+            formRepository.save(form);
+        }
+
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +111,7 @@ public class UserService {
         List<Form>forms = formRepository.findFormsByUsernameWithSections(username);
 
         forms = forms.stream().filter(form -> !form.isDeleted()).toList();
-        
+
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
@@ -105,10 +127,15 @@ public class UserService {
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found with id: " + formId));
 
-        if (!form.getUser().getUsername().equals(username)) {
+        boolean isEditor = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.EDITOR)
+                .orElse(false);
+
+        boolean isOwner = form.getUser().getUsername().equals(username);
+        if (!(isEditor || isOwner)) {
             throw new RuntimeException("Unauthorized to update this form");
         }
-
         List<FormResponse> responses = formResponseRepository.findByFormId(formId);
         if (responses != null && !responses.isEmpty()) {
             return false; // Version control required
@@ -185,9 +212,22 @@ public class UserService {
     @Transactional(readOnly = true)
     public FormGetDTO getFormById(String username, UUID id) {
 
-        Form form = formRepository.findFormByIdAndUsername(id, username)
-                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        boolean isEditor = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.EDITOR)
+                .orElse(false);
 
+        boolean isViewer = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.VIEWER)
+                .orElse(false);
+
+        boolean isOwner = form.getUser().getUsername().equals(username);
+        if (!(isEditor || isOwner || isViewer)) {
+            throw new RuntimeException("Unauthorized to update this form");
+        }
         if(form.isDeleted()) {
             throw new RuntimeException("Form not found or not authorized");
         }
@@ -295,6 +335,44 @@ public class UserService {
         }
         form.setDeleted(false);
         formRepository.save(form);
+    }
+
+    public List<VersionResponseDTO> getVersions(UUID formId) {
+        // Get form
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+
+        //  Get versions
+        List<Form> forms = formRepository.findByMainParentIdOrderByVersionIdDesc(formId);
+
+        // Convert to DTO
+        return forms.stream().map(v -> {
+            VersionResponseDTO dto = new VersionResponseDTO();
+            dto.setVersionId(v.getVersionId());
+            dto.setFormName(v.getTitle());
+            dto.setFormId(v.getId());
+            return dto;
+        }).toList();
+    }
+
+    @Transactional
+    public void switchVersion(UUID formId, int versionId, String username) {
+
+        Form current = formRepository.findFormByIdAndUsername(formId, username)
+                .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
+
+        UUID parentId = current.getMainParentId();
+
+        // deactivate all versions
+        formRepository.deactivateAllVersions(parentId);
+
+        // directly fetch selected version (NO STREAM)
+        Form selected = formRepository.findByMainParentIdAndVersionId(parentId, versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+
+        selected.setPublished(true);
+
+        formRepository.save(selected);
     }
 
 }

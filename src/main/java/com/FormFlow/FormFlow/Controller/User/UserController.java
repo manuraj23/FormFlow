@@ -2,6 +2,7 @@ package com.FormFlow.FormFlow.Controller.User;
 
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
+import com.FormFlow.FormFlow.DTO.FormDetails.Version.SwitchVersionRequest;
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
 import com.FormFlow.FormFlow.Service.User.FormAccessService;
 import com.FormFlow.FormFlow.Service.User.UserService;
@@ -147,4 +148,27 @@ public class UserController {
 
         return ResponseEntity.ok(username);
     }
+
+    @GetMapping("/version/{formId}")
+    public ResponseEntity<?> getVersions(@PathVariable UUID formId) {
+        try {
+            return ResponseEntity.ok(userService.getVersions(formId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/version/switch/{formId}")
+    public ResponseEntity<?> switchVersion(
+            @PathVariable UUID formId,
+            @RequestBody SwitchVersionRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        userService.switchVersion(formId, request.getVersionId(), username);
+
+        return ResponseEntity.ok("version switched successfully");
+    }
+
 }

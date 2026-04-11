@@ -1,7 +1,9 @@
 package com.FormFlow.FormFlow.Repository;
 
+import com.FormFlow.FormFlow.DTO.FormDetails.Version.VersionResponseDTO;
 import com.FormFlow.FormFlow.Entity.Form;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -46,4 +48,21 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
     LEFT JOIN FETCH f.sections s
 """)
     List<Form> findAllFormsWithSections();
+
+    Form findTopByMainParentIdOrderByVersionIdDesc(UUID parentId);
+
+    @Query("SELECT MAX(f.versionId) FROM Form f WHERE f.mainParentId = :parentId")
+    Integer findMaxVersionByParentId(UUID parentId);
+    List<Form> findByMainParentIdOrderByVersionIdDesc(UUID mainParentId);
+//    Form findByMainParentIdAndIsActiveTrue(UUID parentId);
+//    Form findTopByMainParentIdOrderByVersionNumberDesc(UUID parentId);
+
+    Optional<Form> findByMainParentIdAndVersionId(UUID parentId, Integer versionId);
+    @Modifying
+    @Query("""
+    UPDATE Form f 
+    SET f.published = false 
+    WHERE f.mainParentId = :parentId 
+    """)
+    void deactivateAllVersions(@Param("parentId") UUID parentId);
 }

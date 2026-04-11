@@ -1,6 +1,7 @@
 package com.FormFlow.FormFlow.Service.User;
 
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
+import com.FormFlow.FormFlow.DTO.User.FormAccessShareDTO;
 import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.User;
 import com.FormFlow.FormFlow.Entity.UserFormRole;
@@ -10,6 +11,7 @@ import com.FormFlow.FormFlow.Repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,10 +39,10 @@ public class FormAccessService {
 
         Map<UUID, RoleType> newRolesMap = new HashMap<>();
 
-        // OWNER
-        User owner = userRepo.findByUsername(dto.getOwner());
-        if (owner == null) throw new RuntimeException("Owner not found");
-        newRolesMap.put(owner.getUserId(), RoleType.OWNER);
+//        // OWNER
+//        User owner = userRepo.findByUsername(dto.getOwner());
+//        if (owner == null) throw new RuntimeException("Owner not found");
+//        newRolesMap.put(owner.getUserId(), RoleType.OWNER);
 
         // EDITOR
         if (dto.getAccess().getEditor() != null) {
@@ -106,6 +108,9 @@ public class FormAccessService {
             newRole.setForm(form);
             newRole.setRole(entry.getValue());
             newRole.setViewed(false);
+            newRole.setAssignedAt(LocalDateTime.now());
+            newRole.setAssignedBy(dto.getOwner());
+
 
             //  JUST STORE MESSAGE
             String message = null;
@@ -128,20 +133,43 @@ public class FormAccessService {
     }
 
     // GET SHARED FORMS
-    public Map<String, List<UserFormRole>> getSharedForms(UUID userId) {
+    public Map<String, List<FormAccessShareDTO>> getSharedForms(UUID userId) {
 
-        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
-        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
+        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalseAndForm_IsDeletedFalse(userId);
+        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrueAndForm_IsDeletedFalse(userId);
+//        List<UserFormRole> newForms = roleRepo.findByUser_UserIdAndIsViewedFalse(userId);
+//        List<UserFormRole> viewedForms = roleRepo.findByUser_UserIdAndIsViewedTrue(userId);
+
+        List<FormAccessShareDTO> newDTO = newForms.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+
+        List<FormAccessShareDTO> viewedDTO = viewedForms.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
 
         // mark new as viewed
         newForms.forEach(f -> f.setViewed(true));
         roleRepo.saveAll(newForms);
 
-        Map<String, List<UserFormRole>> response = new HashMap<>();
-        response.put("newForms", newForms);
-        response.put("otherForms", viewedForms);
+        Map<String, List<FormAccessShareDTO>> response = new HashMap<>();
+        response.put("newForms", newDTO);
+        response.put("otherForms", viewedDTO);
 
         return response;
+    }
+
+    private FormAccessShareDTO mapToDTO(UserFormRole role) {
+        FormAccessShareDTO dto = new FormAccessShareDTO();
+
+        dto.setFormId(role.getForm().getId());
+        dto.setFormName(role.getForm().getTitle());
+        dto.setRole(role.getRole());
+        dto.setAssignedAt(role.getAssignedAt());
+        dto.setMessage(role.getMessage());
+        dto.setViewed(role.isViewed());
+        dto.setAssignedBy(role.getAssignedBy());
+        return dto;
     }
 
     // HELPERS
@@ -172,14 +200,19 @@ public class FormAccessService {
         List<String> editors = new ArrayList<>();
         List<String> responders = new ArrayList<>();
         List<String> viewers = new ArrayList<>();
+        List<String> messages = new ArrayList<>();
 
         for (UserFormRole role : roles) {
 
             User user = role.getUser();
             if (user == null) continue;
 
+            if (role.getMessage() != null) {
+                messages.add(role.getMessage());
+            }
+
             switch (role.getRole()) {
-                case OWNER -> dto.setOwner(user.getUsername());
+//                case OWNER -> dto.setOwner(user.getUsername());
                 case EDITOR -> editors.add(user.getUsername());
                 case RESPONDER -> responders.add(user.getUsername());
                 case VIEWER -> viewers.add(user.getUsername());
@@ -190,7 +223,7 @@ public class FormAccessService {
         access.setResponder(responders);
         access.setViewer(viewers);
         dto.setAccess(access);
-
+        access.setMessage(messages);
         return dto;
     }
 

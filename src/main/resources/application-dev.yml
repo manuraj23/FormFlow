@@ -50,6 +50,8 @@ spring:
     properties:
       mail:
         smtp:
+          ssl:
+            trust: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST}
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
