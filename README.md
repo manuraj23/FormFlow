@@ -31,8 +31,15 @@
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
 - create group -- http://localhost:8082/formflow/group/createGroup  (post)
 - get all group created by a user-- http://localhost:8082/formflow/group/myGroups  (get)
-- get all Admin of a group -- http://localhost:8082/formflow/group/{id}/admins (get) id is group id
-- get all Member of a group -- http://localhost:8082/formflow/group/{id}/members (get) id is group id
+- get all Admin of a group -- http://localhost:8082/formflow/group/{groupId}/admins (get) id is group id
+- get all Member of a group -- http://localhost:8082/formflow/group/{groupId}/members (get) id is group id
+- add members to group -- http://localhost:8082/formflow/group/{groupId}/addMembers  (post) id is group id
+- remove members from group -- http://localhost:8082/formflow/group/{groupId}/removeUsers  (post) id is group id and userId is user id
+- add admins to group -- http://localhost:8082/formflow/group/{groupId}/addAdmins  (post) id is group id
+- Demote Admin to Member -- http://localhost:8082/formflow/group/{groupId}/removeAdmins  (post) id is group id and userId is user id
+- Invite members to group -- http://localhost:8082/formflow/group/{groupId}/invite  (post) id is group id
+- Join group by invite code -- http://localhost:8082/formflow/group/joinByInviteCode  (post)
+
 
 ### User APIs--  
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
