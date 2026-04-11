@@ -20,16 +20,18 @@ spring:
               - email
               - profile
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-
-        provider:
-          google:
-            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
 #          github:
 #            client-id: ${GITHUB_CLIENT_ID}
 #            client-secret: ${GITHUB_CLIENT_SECRET}
 #            scope:
-#              - read:user
+#              - user
 #              - user:email
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+#          github:
+#            user-info-uri: https://api.github.com/user
 
   jpa:
     hibernate:
