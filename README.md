@@ -13,7 +13,7 @@
 - existing username check -- http://localhost:8082/formflow/auth/usernameCheck  (post)
 - existing email check -- http://localhost:8082/formflow/auth/emailCheck  (post)
 
-- signup -- http://localhost:8082/formflow/auth/login  (post)
+- signup -- http://localhost:8082/formflow/auth/signup  (post)
 - verify Account -- http://localhost:8082/formflow/auth/verifyAccount  (post)
 - Resend OTP for account verification -- http://localhost:8082/formflow/auth/resendOtpVerifyaccount  (post)
 
@@ -27,7 +27,12 @@
 
 - logout -- http://localhost:8082/formflow/auth/logout  (post)
 
-
+### Group APIs--
+#### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
+- create group -- http://localhost:8082/formflow/group/createGroup  (post)
+- get all group created by a user-- http://localhost:8082/formflow/group/myGroups  (get)
+- get all Admin of a group -- http://localhost:8082/formflow/group/{id}/admins (get) id is group id
+- get all Member of a group -- http://localhost:8082/formflow/group/{id}/members (get) id is group id
 
 ### User APIs--  
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
@@ -51,5 +56,5 @@
 
 ### Response APIs--
 #### not authenticated -- anyone can access these APIs without authentication
-- post respose -- http://localhost:8082/formflow/api/responses  (post)
+- post response -- http://localhost:8082/formflow/api/responses  (post)
 - get form response by formId -- http://localhost:8082/formflow/api/responsesget/{formId} (get)
