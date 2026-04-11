@@ -9,6 +9,27 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME_NEON}
     password: ${SPRING_DATASOURCE_PASSWORD_NEON}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+        provider:
+          google:
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+  #       github:
+  #            client-id: ${GITHUB_CLIENT_ID}
+  #            client-secret: ${GITHUB_CLIENT_SECRET}
+  #            scope:
+  #              - read:user
+  #              - user:email
 
   jpa:
     hibernate:
