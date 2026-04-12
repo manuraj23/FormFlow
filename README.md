@@ -45,6 +45,13 @@
 - get all trash form -- http://localhost:8082/formflow/user/form/trash  (get)
 - restore form from trash -- http://localhost:8082/formflow/user/form/restoreFromTrash/{id}  (patch) id is form-id
 - update form Details by id -- http://localhost:8082/formflow/user/updateForm/{id}  (put) id is form-id
+- give/update access -- http://localhost:8082/formflow/user/save (post) 
+- get all access of form -- http://localhost:8082/formflow/user/access/{id} id is form-id
+- get shared access form -- http://localhost:8082/formflow/user/shared-forms (get)
+- get name by email -- http://localhost:8082/formflow/user/username-by-email?email={mail} mail is existing email
+- create new version -- http://localhost:8082/formflow/user/createForm  (post)
+- get all version -- http://localhost:8082/formflow/user/version/{id} (get) id is main parent form-id
+- switch the version -- http://localhost:8082/formflow/user/version/switch/{Id} (patch) id is form-id in which you want to switch
 
 ### public APIs--for form Data
 - get form by id -- http://localhost:8082/formflow/public/form/{id}  (get) id is form-id

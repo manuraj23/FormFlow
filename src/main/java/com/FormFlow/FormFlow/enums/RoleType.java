@@ -1,7 +1,7 @@
 package com.FormFlow.FormFlow.enums;
 
 public enum RoleType {
-    OWNER,
+//    OWNER,
     EDITOR,
     RESPONDER,
     VIEWER,

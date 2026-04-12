@@ -15,6 +15,8 @@ public class FormCreateDTO {
     private String description;
     private boolean published;
     private UUID userId;
+    private int versionId;
+    private UUID mainParentId;
 
     private Map<String, Object> settings;
     private List<SectionDTO> sections;
