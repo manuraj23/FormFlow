@@ -2,10 +2,8 @@ package com.FormFlow.FormFlow.Service.Response;
 
 import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
 import com.FormFlow.FormFlow.Entity.*;
-import com.FormFlow.FormFlow.Repository.FormRepository;
-import com.FormFlow.FormFlow.Repository.FormResponseRepository;
-import com.FormFlow.FormFlow.Repository.FormSectionRepository;
-import com.FormFlow.FormFlow.Repository.UserRepository;
+import com.FormFlow.FormFlow.Repository.*;
+import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,7 +16,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,6 +26,7 @@ public class ResponseService {
     private final FormSectionRepository formSectionRepository;
     private final FormRepository formRepository;
     private final UserRepository userRepository;
+    private final UserFormRoleRepository userFormRoleRepository;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
@@ -37,11 +35,15 @@ public class ResponseService {
     public ResponseService(FormResponseRepository repository,
                            FormSectionRepository formSectionRepository,
                            FormRepository formRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           UserFormRoleRepository userFormRoleRepository
+                         ) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
         this.formRepository = formRepository;
         this.userRepository=userRepository;
+        this.userFormRoleRepository=userFormRoleRepository;
+
     }
 
     // updated to accept files alongside response data
@@ -494,6 +496,15 @@ public class ResponseService {
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+    public Map<String, Long> getUniqueAssignees(UUID formId) {
+        long count = userFormRoleRepository.countByFormIdAndRole(formId, RoleType.RESPONDER);
+        return Map.of("count", count);
+    }
+
+    public Map<String, Long> getUniqueRespondents(UUID formId) {
+        long count = repository.countDistinctUserByForm_Id(formId);
+        return Map.of("count", count);
     }
 
     private FormResponseDTO mapToDTO(FormResponse entity) {

@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -63,5 +64,15 @@ public class ResponseController {
     @GetMapping("/email/{email}")
     public List<FormResponseDTO> getByEmail(@PathVariable String email) {
         return service.getByEmail(email);
+    }
+
+    @GetMapping("/assignees/{formId}")
+    public Map<String, Long> getUniqueAssignees(@PathVariable UUID formId) {
+        return service.getUniqueAssignees(formId);
+    }
+
+    @GetMapping("/respondents/{formId}")
+    public Map<String, Long> getUniqueRespondents(@PathVariable UUID formId) {
+        return service.getUniqueRespondents(formId);
     }
 }
