@@ -113,45 +113,55 @@ public class UserService {
     }
     @Transactional(readOnly = true)
     public List<FormGetDTO> getAllForms(String username) {
-        List<Form> forms = formRepository.findFormsByUsernameWithSections(username).stream().
-                filter(form -> !form.isDeleted()).collect(Collectors.toList());
+
+        List<Form> forms = formRepository.findFormsByUsernameWithSections(username)
+                .stream()
+                .filter(form -> !form.isDeleted())
+                .collect(Collectors.toList());
 
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // GROUP BY mainParentId (handle null safely)
+        // GROUP BY parentId safely
         Map<UUID, List<Form>> groupedForms = forms.stream()
                 .collect(Collectors.groupingBy(
-                        form -> form.getMainParentId() != null ? form.getMainParentId() : form.getId()
+                        form -> form.getMainParentId() != null
+                                ? form.getMainParentId()
+                                : form.getId()
                 ));
 
         List<Form> finalForms = new ArrayList<>();
 
         for (List<Form> versionList : groupedForms.values()) {
 
-            // STEP 1: Try to get latest published version
-            Optional<Form> activeForm = versionList.stream().filter(Form::isPublished)
-                    .max(Comparator.comparingInt(Form::getVersionId));
+            // 🔥 PRIORITY 1 → ACTIVE FORM
+            Optional<Form> activeForm = versionList.stream()
+                    .filter(Form::isPublished)
+                    .max(Comparator.comparingInt(Form::getVersionId)); // latest published
 
             if (activeForm.isPresent()) {
                 finalForms.add(activeForm.get());
-            } else {
-                // STEP 2: If no published → get latest version
-                versionList.stream().max(Comparator.comparingInt(Form::getVersionId))
-                        .ifPresent(finalForms::add);
+                continue;
             }
+
+            // 🔥 PRIORITY 2 → LATEST VERSION
+            versionList.stream()
+                    .max(Comparator.comparingInt(Form::getVersionId))
+                    .ifPresent(finalForms::add);
         }
 
-        // Load sections + fields
-        List<UUID> formIds = finalForms.stream().map(Form::getId).collect(Collectors.toList());
+        // Load sections
+        List<UUID> formIds = finalForms.stream()
+                .map(Form::getId)
+                .collect(Collectors.toList());
 
         formSectionRepository.findByFormIdInWithFields(formIds);
 
-        // Convert to DTO
-        return finalForms.stream().map(this::convertToDTO).collect(Collectors.toList());
-    }
-    @Transactional
+        return finalForms.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }    @Transactional
     public boolean updateForm(UUID formId, FormCreateDTO dto, String username) {
 
         Form form = formRepository.findById(formId)
@@ -330,14 +340,40 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional
     public void softDeleteForm(String username, UUID id) {
+
         Form form = formRepository.findFormByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Form not found or not authorized"));
-        if (form.isDeleted()) {
-            return;
-        }
+
+        if (form.isDeleted()) return;
+
+        boolean wasPublished = form.isPublished();
+
+        // Step 1: delete current
         form.setDeleted(true);
+        form.setPublished(false); // IMPORTANT
         formRepository.save(form);
+
+        // Step 2: If deleted form was ACTIVE → promote latest draft
+        if (wasPublished) {
+
+            UUID parentId = form.getMainParentId() != null
+                    ? form.getMainParentId()
+                    : form.getId();
+
+            List<Form> versions = formRepository
+                    .findByMainParentIdOrderByVersionIdDesc(parentId)
+                    .stream()
+                    .filter(f -> !f.isDeleted())
+                    .collect(Collectors.toList());
+
+            if (!versions.isEmpty()) {
+                Form latest = versions.get(0); // highest versionId
+                latest.setPublished(true);
+                formRepository.save(latest);
+            }
+        }
     }
 
     public List<FormGetDTO> getTrashedForms(String username) {
@@ -367,13 +403,26 @@ public class UserService {
         formRepository.save(form);
     }
 
+    @Transactional(readOnly = true)
     public List<VersionResponseDTO> getVersions(UUID formId) {
+
         // Get form
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found"));
 
-        //  Get versions
-        List<Form> forms = formRepository.findByMainParentIdOrderByVersionIdDesc(formId);
+        //Resolve parentId correctly
+        UUID parentId = form.getMainParentId() != null
+                ? form.getMainParentId()
+                : form.getId();
+
+        //Get all versions
+        List<Form> forms = formRepository
+                .findByMainParentIdOrderByVersionIdDesc(parentId);
+
+        //REMOVE deleted forms
+        forms = forms.stream()
+                .filter(f -> !f.isDeleted())
+                .collect(Collectors.toList());
 
         // Convert to DTO
         return forms.stream().map(v -> {
@@ -383,11 +432,9 @@ public class UserService {
             dto.setFormId(v.getId());
             dto.setPublished(v.isPublished());
             dto.setCreatedAt(v.getCreatedAt());
-
             return dto;
-        }).toList();
+        }).collect(Collectors.toList());
     }
-
     @Transactional
     public void switchVersion(UUID formId, int versionId, String username) {
 
