@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -53,12 +54,18 @@ public class UserService {
 
             form.setVersionId((maxVersion==null) ? 2 : maxVersion+ 1);
 
-            Form latest = formRepository
-                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
-            if (latest != null) {
-                latest.setPublished(false);
-                formRepository.save(latest);
+            //Deactivate ALL previous versions (not just latest)
+            List<Form> allVersions = formRepository
+                    .findByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
+
+            for (Form f : allVersions) {
+                if (f.isPublished()) {
+                    f.setPublished(false);
+                }
             }
+
+            // Save all updates in one go
+            formRepository.saveAll(allVersions);
 
         }else{
             form.setVersionId(1);
@@ -107,19 +114,51 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<FormGetDTO> getAllForms(String username) {
-        List<Form>forms = formRepository.findFormsByUsernameWithSections(username);
-
+        List<Form> forms = formRepository.findFormsByUsernameWithSections(username);
         forms = forms.stream().filter(form -> !form.isDeleted()).toList();
 
         if (forms.isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<UUID> formIds = forms.stream().map(Form::getId).toList();
+        // GROUP BY mainParentId
+        Map<UUID, List<Form>> groupedForms = forms.stream()
+                .collect(Collectors.groupingBy(Form::getMainParentId));
+
+        List<Form> finalForms = new ArrayList<>();
+
+        for (List<Form> versionList : groupedForms.values()) {
+            // Find max versionId
+            int maxVersion = versionList.stream().mapToInt(Form::getVersionId).max().orElse(1);
+
+            if (maxVersion == 1) {
+                // Only one version → return it
+                finalForms.add(versionList.get(0));
+            } else {
+                // Try to find ACTIVE (published)
+                Optional<Form> activeForm = versionList.stream().filter(Form::isPublished).findFirst();
+
+                if (activeForm.isPresent()) {
+                    finalForms.add(activeForm.get());
+                } else {
+                    //No active → return latest version
+                    Form latest = versionList.stream().max(Comparator.comparingInt(Form::getVersionId)).orElse(null);
+                    if (latest != null) {
+                        finalForms.add(latest);
+                    }
+                }
+            }
+        }
+
+        // Load fields ONLY for final forms
+        List<UUID> formIds = finalForms.stream().map(Form::getId).toList();
+
         formSectionRepository.findByFormIdInWithFields(formIds);
 
-        return forms.stream().map(this::convertToDTO).toList();
+        // RETURN FINAL FORMS (IMPORTANT FIX)
+        return finalForms.stream().map(this::convertToDTO).toList();
     }
+
     @Transactional
     public boolean updateForm(UUID formId, FormCreateDTO dto, String username) {
 
