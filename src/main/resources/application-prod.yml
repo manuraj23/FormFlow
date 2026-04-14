@@ -34,7 +34,7 @@ spring:
         format_sql: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL}
 
   mail:
-    host: ${SPRING_MAIL_HOST}
+    host: smtp.gmail.com
     port: ${SPRING_MAIL_PORT}
     username: ${SPRING_MAIL_USERNAME}
     password: ${SPRING_MAIL_PASSWORD}
