@@ -50,10 +50,9 @@ public class UserService {
             form.setMainParentId(dto.getMainParentId());
             Integer maxVersion = formRepository
                     .findMaxVersionByParentId(dto.getMainParentId());
-            form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
-            if(form.getVersionId() == 2){
 
-            }
+            form.setVersionId((maxVersion==null) ? 2 : maxVersion+ 1);
+
             Form latest = formRepository
                     .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
             if (latest != null) {
@@ -99,7 +98,7 @@ public class UserService {
         }
 
         formRepository.save(form);
-        if(form.getVersionId() == 1) {
+        if (form.getMainParentId() == null) {
             form.setMainParentId(form.getId());
             formRepository.save(form);
         }
