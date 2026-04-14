@@ -171,4 +171,12 @@ public class UserController {
         return ResponseEntity.ok("version switched successfully");
     }
 
+    @PatchMapping("/version/delete/{id}")
+    public ResponseEntity<?> deleteAllVersions(@PathVariable UUID id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        userService.deleteAllVersions(id);
+        return ResponseEntity.ok("All Form Version Deleted");
+    }
+
 }

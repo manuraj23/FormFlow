@@ -407,5 +407,10 @@ public class UserService {
 
         formRepository.save(selected);
     }
-
-}
+    @Transactional
+    public void deleteAllVersions(UUID formId) {
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        UUID parentId = form.getMainParentId() != null ? form.getMainParentId() : form.getId();
+        formRepository.softDeleteByMainParentId(parentId);
+    }}
