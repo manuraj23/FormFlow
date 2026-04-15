@@ -28,6 +28,11 @@ public class ResponseController {
         return service.saveResponse(responseDTO, null);
     } */
 
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO) {
+        return service.saveResponse(responseDTO, null);
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FormResponseDTO submitWithFiles(
             @RequestPart("response") String responseJson,

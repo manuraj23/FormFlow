@@ -31,4 +31,8 @@ public class FormResponse {
     private Map<String, Object> response;
 
     private LocalDateTime submittedAt;
+
+    private Double score;
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> evaluation;
 }

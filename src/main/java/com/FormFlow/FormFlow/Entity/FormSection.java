@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +29,12 @@ public class FormSection {
     @JoinColumn(name = "form_id")
     @JsonIgnore
     private Form form;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal positiveMarks;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal negativeMarks;
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("fieldOrder ASC")

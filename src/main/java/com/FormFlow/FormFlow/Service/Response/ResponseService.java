@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -89,14 +90,35 @@ public class ResponseService {
             }
         }
 
+        Map<String, Object> evaluation = null;
+        Double score = null;
+
+        // check if quiz
+        Form form = formRepository.findById(dto.getFormId()).orElseThrow();
+        Map<String, Object> settings = form.getSettings();
+
+        if (settings != null && Boolean.TRUE.equals(settings.get("isQuiz"))) {
+            evaluation = evaluateQuiz(dto.getFormId(), responseMap);
+            score = ((Number) evaluation.get("totalScore")).doubleValue();
+        }
 
         // Save response to DB
         FormResponse entity = mapToEntity(dto);
         entity.setSubmittedAt(LocalDateTime.now());
+        entity.setScore(score);
+        entity.setEvaluation(evaluation);
 
         FormResponse saved = repository.save(entity);
+        boolean showScore = settings != null && Boolean.TRUE.equals(settings.get("scoreShow"));
 
-        return mapToDTO(saved);
+        FormResponseDTO responseDTO = mapToDTO(saved);
+
+        if (!showScore) {
+            responseDTO.setScore(null);
+            responseDTO.setEvaluation(null);
+        }
+
+        return responseDTO;
     }
 
     // saves file to local uploads/ folder and return a unique file name
@@ -484,6 +506,8 @@ public class ResponseService {
         dto.setFormId(entity.getForm().getId());
         dto.setResponse(entity.getResponse());
         dto.setSubmittedAt(entity.getSubmittedAt());
+        dto.setScore(entity.getScore());
+        dto.setEvaluation(entity.getEvaluation());
         return dto;
     }
 
@@ -497,6 +521,56 @@ public class ResponseService {
         entity.setResponse(dto.getResponse());
         entity.setSubmittedAt(dto.getSubmittedAt());
         return entity;
+    }
+
+
+    private Map<String, Object> evaluateQuiz(UUID formId, Map<String, Object> responseMap) {
+
+        Map<String, Object> evaluation = new HashMap<>();
+        double totalScore = 0;
+
+        List<FormSection> sections = formSectionRepository
+                .findByFormIdInWithFields(List.of(formId));
+
+        for (FormSection section : sections) {
+
+            BigDecimal positiveBD = section.getPositiveMarks();
+            BigDecimal negativeBD = section.getNegativeMarks();
+
+            double positive = positiveBD != null ? positiveBD.doubleValue() : 0;
+            double negative = negativeBD != null ? negativeBD.doubleValue() : 0;
+
+            for (FormFields field : section.getFields()) {
+
+                Map<String, Object> config = field.getFieldConfig();
+                if (config == null) continue;
+
+                Object correctAnswer = config.get("answer");
+                if (correctAnswer == null) continue; // not a quiz field
+
+                String fieldId = field.getId().toString();
+                Object userAnswer = responseMap.get(fieldId);
+
+                boolean isCorrect = userAnswer != null &&
+                        userAnswer.toString().equals(correctAnswer.toString());
+
+                Map<String, Object> result = new HashMap<>();
+                result.put("correct", isCorrect);
+                result.put("correctAnswer", correctAnswer);
+
+                evaluation.put(fieldId, result);
+
+                if (isCorrect) {
+                    totalScore += positive;
+                } else {
+                    totalScore -= negative;
+                }
+            }
+        }
+
+        evaluation.put("totalScore", totalScore);
+
+        return evaluation;
     }
 }
 

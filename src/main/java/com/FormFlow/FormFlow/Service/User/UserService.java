@@ -76,6 +76,8 @@ public class UserService {
                 FormSection section = new FormSection();
                 section.setSectionTitle(sectionDTO.getSectionTitle());
                 section.setSectionOrder(sectionDTO.getSectionOrder());
+                section.setPositiveMarks(sectionDTO.getPositiveMarks());
+                section.setNegativeMarks(sectionDTO.getNegativeMarks());
                 section.setForm(form);
 
                 if (sectionDTO.getFields() != null) {
@@ -135,7 +137,7 @@ public class UserService {
 
         for (List<Form> versionList : groupedForms.values()) {
 
-            // 🔥 PRIORITY 1 → ACTIVE FORM
+            //  PRIORITY 1 → ACTIVE FORM
             Optional<Form> activeForm = versionList.stream()
                     .filter(Form::isPublished)
                     .max(Comparator.comparingInt(Form::getVersionId)); // latest published
@@ -145,7 +147,7 @@ public class UserService {
                 continue;
             }
 
-            // 🔥 PRIORITY 2 → LATEST VERSION
+            //  PRIORITY 2 → LATEST VERSION
             versionList.stream()
                     .max(Comparator.comparingInt(Form::getVersionId))
                     .ifPresent(finalForms::add);
@@ -161,7 +163,37 @@ public class UserService {
         return finalForms.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-    }    @Transactional
+    }
+
+    @Transactional(readOnly = true)
+    public FormGetDTO getFormById(String username, UUID id) {
+
+        Form form = formRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        boolean isEditor = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.EDITOR)
+                .orElse(false);
+
+        boolean isViewer = userFormRoleRepository
+                .findByUser_UsernameAndForm_Id(username, form.getId())
+                .map(role -> role.getRole() == RoleType.VIEWER)
+                .orElse(false);
+
+        boolean isOwner = form.getUser().getUsername().equals(username);
+        if (!(isEditor || isOwner || isViewer)) {
+            throw new RuntimeException("Unauthorized to update this form");
+        }
+        if(form.isDeleted()) {
+            throw new RuntimeException("Form not found or not authorized");
+        }
+
+        formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
+
+        return convertToDTO(form);
+    }
+
+    @Transactional
     public boolean updateForm(UUID formId, FormCreateDTO dto, String username) {
 
         Form form = formRepository.findById(formId)
@@ -215,6 +247,8 @@ public class UserService {
             section.setSectionTitle(sectionDTO.getSectionTitle());
             section.setSectionOrder(sectionDTO.getSectionOrder());
             section.setForm(form);
+            section.setNegativeMarks(sectionDTO.getNegativeMarks());
+            section.setPositiveMarks(sectionDTO.getPositiveMarks());
 
             List<FormFields> fields = new ArrayList<>();
             for (FieldDTO fieldDTO : sectionDTO.getFields()) {
@@ -248,33 +282,6 @@ public class UserService {
         }
 
         return true;
-    }
-    @Transactional(readOnly = true)
-    public FormGetDTO getFormById(String username, UUID id) {
-
-        Form form = formRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Form not found"));
-        boolean isEditor = userFormRoleRepository
-                .findByUser_UsernameAndForm_Id(username, form.getId())
-                .map(role -> role.getRole() == RoleType.EDITOR)
-                .orElse(false);
-
-        boolean isViewer = userFormRoleRepository
-                .findByUser_UsernameAndForm_Id(username, form.getId())
-                .map(role -> role.getRole() == RoleType.VIEWER)
-                .orElse(false);
-
-        boolean isOwner = form.getUser().getUsername().equals(username);
-        if (!(isEditor || isOwner || isViewer)) {
-            throw new RuntimeException("Unauthorized to update this form");
-        }
-        if(form.isDeleted()) {
-            throw new RuntimeException("Form not found or not authorized");
-        }
-
-        formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
-
-        return convertToDTO(form);
     }
 
 
