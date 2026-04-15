@@ -1,8 +1,8 @@
 package com.FormFlow.FormFlow.Controller.Group;
 
 import com.FormFlow.FormFlow.DTO.Group.GroupCreateDTO;
+import com.FormFlow.FormFlow.DTO.Group.GroupResponseDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupUser;
-import com.FormFlow.FormFlow.Entity.GroupEntity.Group;
 import com.FormFlow.FormFlow.Service.Group.GroupService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +25,8 @@ public class GroupController {
     @PostMapping("/createGroup")
     public ResponseEntity<?> createForm(@RequestBody GroupCreateDTO groupCreateDTO) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            Group group = groupService.createGroup(groupCreateDTO, username);
+            String username = getAuthenticatedUsername();
+            GroupResponseDTO group = groupService.createGroupResponse(groupService.createGroup(groupCreateDTO, username));
             return ResponseEntity.ok().body(Map.of(
                     "message", "Group created successfully",
                     "group", group));
@@ -40,9 +39,8 @@ public class GroupController {
     @GetMapping("/myGroups")
     public ResponseEntity<?> getMyGroups() {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            List<Group> groups = groupService.getGroupsOfUser(username);
+            String username = getAuthenticatedUsername();
+            List<GroupResponseDTO> groups = groupService.getGroupsOfUser(username);
             return ResponseEntity.ok(Map.of(
                     "message", "Groups fetched successfully",
                     "groups", groups));
@@ -75,6 +73,97 @@ public class GroupController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error fetching group members: " + e.getMessage());
         }
+    }
+
+    @Operation(summary = "Add members to Group")
+    @PostMapping("/{groupId}/addMembers")
+    public ResponseEntity<?> addMembersToGroup(@PathVariable UUID groupId, @RequestBody List<String> members) {
+        try {
+            String username = getAuthenticatedUsername();
+            groupService.addMembers(groupId, members, username);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Members added successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error adding members: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Promote users to Admin")
+    @PostMapping("/{groupId}/addAdmins")
+    public ResponseEntity<?> addAdmins(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+            groupService.addAdmins(groupId, usernames, currentUsername);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Admins added successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error adding admins: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Demote admins to members")
+    @PostMapping("/{groupId}/removeAdmins")
+    public ResponseEntity<?> removeAdmins(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+            groupService.removeAdmins(groupId, usernames, currentUsername);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Admins demoted to members successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error removing admins: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Invite members using invite Link")
+    @PostMapping("/{groupId}/invite")
+    public ResponseEntity<?> generateInvite(@PathVariable UUID groupId, @RequestParam int minutesValid) {
+
+        String username = getAuthenticatedUsername();
+        String link = groupService.generateInviteLink(groupId, username, minutesValid);
+        return ResponseEntity.ok(Map.of(
+                "message", "Invite link generated",
+                "link", link
+        ));
+    }
+
+    @Operation(summary = "Join Group using invite link")
+    @PostMapping("/joinByInviteCode")
+    public ResponseEntity<?> joinGroup(@RequestParam String token) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(401).body("User must be logged in");
+        }
+        String username = auth.getName();
+        groupService.joinGroupByInvite(token, username);
+        return ResponseEntity.ok(Map.of(
+                "message", "Joined group successfully"
+        ));
+    }
+
+    @Operation(summary = "Remove members/admins from group")
+    @PostMapping("/{groupId}/removeUsers")
+    public ResponseEntity<?> removeUsers(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+            groupService.removeUsers(groupId, usernames, currentUsername);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Users removed successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error removing users: " + e.getMessage());
+        }
+    }
+
+    private String getAuthenticatedUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
+            throw new RuntimeException("User must be logged in");
+        }
+        return authentication.getName();
     }
 
 }
