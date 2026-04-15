@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: FormFlow
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+  config:
+    import: optional:file:.env[.properties]
