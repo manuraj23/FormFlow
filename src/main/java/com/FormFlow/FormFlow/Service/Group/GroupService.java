@@ -1,6 +1,7 @@
 package com.FormFlow.FormFlow.Service.Group;
 
 import com.FormFlow.FormFlow.DTO.Group.GroupCreateDTO;
+import com.FormFlow.FormFlow.DTO.Group.GroupResponseDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupUser;
 import com.FormFlow.FormFlow.Entity.GroupEntity.Group;
 import com.FormFlow.FormFlow.Entity.GroupEntity.GroupInvite;
@@ -51,9 +52,13 @@ public class GroupService {
         return groupRepository.save(group);
     }
 
-    public List<Group> getGroupsOfUser(String username) {
+    public GroupResponseDTO createGroupResponse(Group group) {
+        return mapToGroupResponseDTO(group);
+    }
+
+    public List<GroupResponseDTO> getGroupsOfUser(String username) {
         User user = userRepository.findByUsername(username);
-        return groupRepository.findByOwner(user);
+        return groupRepository.findByOwner(user).stream().map(this::mapToGroupResponseDTO).toList();
     }
 
     @Transactional(readOnly = true)
@@ -84,8 +89,26 @@ public class GroupService {
         return dto;
     }
 
+    private GroupResponseDTO mapToGroupResponseDTO(Group group) {
+        GroupResponseDTO dto = new GroupResponseDTO();
+        dto.setGroupId(group.getGroupId());
+        dto.setGroupName(group.getGroupName());
+        dto.setDescription(group.getDescription());
+        dto.setImageUrl(group.getImageUrl());
+        dto.setMaxMembers(group.getMaxMembers());
+        dto.setIsPrivate(group.isPrivate());
+        dto.setCreatedAt(group.getCreatedAt());
+        dto.setUpdatedAt(group.getUpdatedAt());
+        if (group.getOwner() != null) {
+            dto.setOwnerId(group.getOwner().getUserId());
+            dto.setOwnerUsername(group.getOwner().getUsername());
+            dto.setOwnerEmail(group.getOwner().getEmail());
+        }
+        return dto;
+    }
+
     @Transactional
-    public void addMembers(UUID groupId, List<String> usernames, String currentUsername) {
+    public void addMembers(UUID groupId, List<String> emails, String currentUsername) {
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
         if (currentUser == null) {
@@ -94,11 +117,9 @@ public class GroupService {
         if (!group.getOwner().equals(currentUser) && !group.getAdmins().contains(currentUser)) {
             throw new RuntimeException("Only Owner or Admin can add members");
         }
-        for (String username : usernames) {
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                throw new RuntimeException("User not found: " + username);
-            }
+        for (String email : emails) {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
             if (group.getMembers().contains(user)) {
                 continue;
             }
@@ -157,9 +178,7 @@ public class GroupService {
             if (user.equals(group.getOwner())) {
                 throw new RuntimeException("Owner cannot be demoted");
             }
-            if (group.getAdmins().contains(user)) {
-                group.getAdmins().remove(user);
-            }
+            group.getAdmins().remove(user);
         }
         group.setUpdatedAt(LocalDateTime.now());
         groupRepository.save(group);
