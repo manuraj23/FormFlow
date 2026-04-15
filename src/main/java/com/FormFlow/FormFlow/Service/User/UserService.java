@@ -296,6 +296,7 @@ public class UserService {
         dto.setCreatedAt(form.getCreatedAt());
         dto.setCreatedBy(form.getUser().getUsername());
         dto.setMainParentId(form.getMainParentId());
+        dto.setVersionId(form.getVersionId());
         if (form.getSections() != null) {
             dto.setSections(form.getSections().stream().map(section -> {
                 SectionDTO sectionDTO = new SectionDTO();
