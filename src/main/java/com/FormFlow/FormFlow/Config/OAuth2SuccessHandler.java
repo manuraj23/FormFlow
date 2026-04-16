@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -13,12 +14,17 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final OAuthService oAuthService;
+
+    @Value("${app.frontend-url:http://localhost:4200}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -32,9 +38,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         OAuth2ResponseDTO authResponse = oAuthService.handleOAuth2Request(oAuth2User, registrationId);
 
-        String redirectUrl = "http://localhost:4200/oauth-success" +
-                "?accessToken=" + authResponse.getAccessToken() +
-                "&refreshToken=" + authResponse.getRefreshToken();
+        String baseUrl = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
+        String redirectUrl = baseUrl + "/oauth-success" +
+                "?accessToken=" + URLEncoder.encode(authResponse.getAccessToken(), StandardCharsets.UTF_8) +
+                "&refreshToken=" + URLEncoder.encode(authResponse.getRefreshToken(), StandardCharsets.UTF_8);
         response.sendRedirect(redirectUrl);
     }
 }

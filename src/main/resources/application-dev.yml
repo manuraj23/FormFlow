@@ -3,6 +3,9 @@ server:
   servlet:
     context-path: /formflow
 
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL_LOCAL}
