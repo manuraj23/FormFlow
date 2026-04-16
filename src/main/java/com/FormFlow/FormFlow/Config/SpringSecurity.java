@@ -51,7 +51,8 @@ public class SpringSecurity {
                                 "/v3/api-docs/**",
                                 "/public/**",
                                 "/uploads/**",
-                                "/oauth2/**"
+                                "/oauth2/**",
+                                "/error"
                         )).permitAll()
 
                         .requestMatchers(allMatchers("/user/**", "/group/**")).authenticated()
