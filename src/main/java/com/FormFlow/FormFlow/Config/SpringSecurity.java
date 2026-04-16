@@ -18,6 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -30,6 +33,9 @@ public class SpringSecurity {
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
 
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -39,17 +45,17 @@ public class SpringSecurity {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
+                        .requestMatchers(allMatchers(
                                 "/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/public/**",
                                 "/uploads/**",
                                 "/oauth2/**"
-                        ).permitAll()
+                        )).permitAll()
 
-                        .requestMatchers("/user/**", "/group/**").authenticated()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers(allMatchers("/user/**", "/group/**")).authenticated()
+                        .requestMatchers(allMatchers("/admin/**")).hasRole("ADMIN")
 
                         .anyRequest().denyAll()
                 )
@@ -87,5 +93,33 @@ public class SpringSecurity {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    private String[] withContextPath(String pattern) {
+        String normalizedContextPath = (contextPath == null) ? "" : contextPath.trim();
+        if (normalizedContextPath.isEmpty() || "/".equals(normalizedContextPath)) {
+            return new String[]{pattern};
+        }
+
+        if (!normalizedContextPath.startsWith("/")) {
+            normalizedContextPath = "/" + normalizedContextPath;
+        }
+        if (normalizedContextPath.endsWith("/")) {
+            normalizedContextPath = normalizedContextPath.substring(0, normalizedContextPath.length() - 1);
+        }
+
+        String withoutPrefix = pattern;
+        String withPrefix = normalizedContextPath + pattern;
+        return new String[]{withoutPrefix, withPrefix};
+    }
+
+    private String[] allMatchers(String... patterns) {
+        List<String> all = new ArrayList<>();
+        for (String pattern : patterns) {
+            for (String resolved : withContextPath(pattern)) {
+                all.add(resolved);
+            }
+        }
+        return all.toArray(new String[0]);
     }
 }
