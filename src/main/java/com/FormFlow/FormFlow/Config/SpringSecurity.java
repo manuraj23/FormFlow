@@ -29,7 +29,12 @@ public class SpringSecurity {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api/responses/**", "/public/**", "/uploads/**", "/oauth2/**").permitAll()
+                        .requestMatchers("/formflow/auth/**",
+                                "/formflow/swagger-ui/**",
+                                "/formflow/v3/api-docs/**",
+                                "/formflow/public/**",
+                                "/formflow/uploads/**",
+                                "/formflow/oauth2/**").permitAll()
                         .requestMatchers("/user/**", "/group/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()
