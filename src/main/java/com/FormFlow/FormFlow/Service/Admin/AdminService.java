@@ -80,6 +80,7 @@ public class AdminService {
                         fieldDTO.setFieldOrder(field.getFieldOrder());
                         fieldDTO.setFieldStyle(field.getFieldStyle());
                         fieldDTO.setFieldConfig(field.getFieldConfig());
+                        fieldDTO.setFieldLogic(field.getFieldLogic());
                         return fieldDTO;
                     }).toList());
                 }

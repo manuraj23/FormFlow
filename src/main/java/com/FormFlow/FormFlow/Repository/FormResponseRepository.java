@@ -18,6 +18,7 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, UUID
 
     boolean existsByFormId(UUID formId);
     // count unique users who actually submitted a response
-    long countDistinctUserByForm_Id(UUID formId);
+    @Query("SELECT COUNT(DISTINCT r.user.userId) FROM FormResponse r WHERE r.form.id = :formId AND r.user IS NOT NULL")
+    long countDistinctRespondentsByFormId(UUID formId);
 
 }

@@ -84,10 +84,11 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-
+                        field.setId(UUID.fromString(fieldDTO.getId()));
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());
+                        field.setFieldLogic(fieldDTO.getFieldLogic());
                         field.setSection(section);
 
                         return field;
@@ -191,6 +192,7 @@ public class UserService {
 
                 field.setFieldConfig(fieldDTO.getFieldConfig() != null ? fieldDTO.getFieldConfig() : Collections.emptyMap());
                 field.setFieldStyle(fieldDTO.getFieldStyle() != null ? fieldDTO.getFieldStyle() : Collections.emptyMap());
+                field.setFieldLogic(fieldDTO.getFieldLogic() != null ? fieldDTO.getFieldLogic() : Collections.emptyMap());
                 field.setSection(section);
                 fields.add(field);
             }
@@ -264,6 +266,7 @@ public class UserService {
                         fieldDTO.setFieldOrder(field.getFieldOrder());
                         fieldDTO.setFieldStyle(field.getFieldStyle());
                         fieldDTO.setFieldConfig(field.getFieldConfig());
+                        fieldDTO.setFieldLogic(field.getFieldLogic());
                         return fieldDTO;
                     }).toList());
                 }
