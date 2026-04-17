@@ -27,6 +27,11 @@
 
 - logout -- http://localhost:8082/formflow/auth/logout  (post)
 
+### Chatbot APIs:
+#### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
+
+- create form using chatbot -- http://localhost:8082/formflow/ai/generateForm  (post)
+
 ### Group APIs--
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
 - create group -- http://localhost:8082/formflow/group/createGroup  (post)
