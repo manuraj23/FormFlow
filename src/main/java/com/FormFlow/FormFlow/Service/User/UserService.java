@@ -84,7 +84,9 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-                        field.setId(UUID.fromString(fieldDTO.getId()));
+                        if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                            field.setId(UUID.fromString(fieldDTO.getId()));
+                        }
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());

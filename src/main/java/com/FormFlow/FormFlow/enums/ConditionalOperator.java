@@ -12,9 +12,10 @@ public enum ConditionalOperator {
 
     @JsonCreator
     public static ConditionalOperator from(String value) {
-        return ConditionalOperator.valueOf(
-                value.trim().toUpperCase().replace(" ", "_")
-        );
-
+        String normalized = value.trim().toUpperCase().replace(" ", "_");
+        if (normalized.equals("EQUALS")) return EQUAL;
+        if (normalized.equals("NOT_EQUALS")) return NOT_EQUAL;
+        return ConditionalOperator.valueOf(normalized);
     }
+
     }

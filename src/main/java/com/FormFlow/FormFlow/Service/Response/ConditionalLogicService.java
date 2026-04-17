@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,7 +16,7 @@ public class ConditionalLogicService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // public entry point — called from ResponseService
+
     // fresh visited set per call so concurrent requests never share state
     public boolean isActive(Object logicObj,
                             Map<String, Object> submittedResponse,
@@ -44,8 +45,8 @@ public class ConditionalLogicService {
         if (visited.contains(parentId)) return true;
         visited.add(parentId);
 
-        // --- LAYER 3: walk up the chain before evaluating this condition ---
-        // check if the parent field itself is active before trusting its value
+
+
         // if parent is hidden, this field is hidden too regardless of submitted value
         if (fieldMap != null && fieldMap.containsKey(parentId)) {
             FormFields parentField = fieldMap.get(parentId);
@@ -57,7 +58,7 @@ public class ConditionalLogicService {
             );
             if (!parentActive) return false;
         }
-        // --------------------------------------------------------------------
+
 
         // get the value submitted for the field this condition depends on
         Object dependsOnValue = submittedResponse.get(parentId);
@@ -86,6 +87,27 @@ public class ConditionalLogicService {
 
         String submitted = submittedValue.toString().trim();
         String condition = conditionValue != null ? conditionValue.toString().trim() : "";
+      // to handle checkbox answers
+        if (submittedValue instanceof List) {
+            List<?> list = (List<?>) submittedValue;
+            switch (operator) {
+                case EQUAL:
+                    return list.stream()
+                            .anyMatch(item -> item.toString()
+                                    .equalsIgnoreCase(condition));
+                case NOT_EQUAL:
+                    return list.stream()
+                            .noneMatch(item -> item.toString()
+                                    .equalsIgnoreCase(condition));
+                case CONTAINS:
+                    return list.stream()
+                            .anyMatch(item -> item.toString()
+                                    .toLowerCase()
+                                    .contains(condition.toLowerCase()));
+                default:
+                    return false;
+            }
+        }
 
         switch (operator) {
 
