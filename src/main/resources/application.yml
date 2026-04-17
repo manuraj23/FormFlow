@@ -19,3 +19,10 @@ spring:
           auth: true
           starttls:
             enable: true
+
+ai:
+  gemini:
+    api-key: ${GEMINI_API_KEY}
+    api-base: ${GEMINI_API_BASE:https://generativelanguage.googleapis.com/v1beta}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+
