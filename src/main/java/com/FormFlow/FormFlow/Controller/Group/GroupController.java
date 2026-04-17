@@ -21,6 +21,15 @@ public class GroupController {
     @Autowired
     private GroupService groupService;
 
+    private String getAuthenticatedUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null
+                || "anonymousUser".equalsIgnoreCase(authentication.getName())) {
+            throw new RuntimeException("User must be logged in");
+        }
+        return authentication.getName();
+    }
+
     @Operation(summary = "Create a new Group")
     @PostMapping("/createGroup")
     public ResponseEntity<?> createForm(@RequestBody GroupCreateDTO groupCreateDTO) {
@@ -77,10 +86,10 @@ public class GroupController {
 
     @Operation(summary = "Add members to Group")
     @PostMapping("/{groupId}/addMembers")
-    public ResponseEntity<?> addMembersToGroup(@PathVariable UUID groupId, @RequestBody List<String> members) {
+    public ResponseEntity<?> addMembersToGroup(@PathVariable UUID groupId, @RequestBody List<String> membersEmail) {
         try {
             String username = getAuthenticatedUsername();
-            groupService.addMembers(groupId, members, username);
+            groupService.addMembers(groupId, membersEmail, username);
             return ResponseEntity.ok(Map.of(
                     "message", "Members added successfully"
             ));
@@ -91,10 +100,10 @@ public class GroupController {
 
     @Operation(summary = "Promote users to Admin")
     @PostMapping("/{groupId}/addAdmins")
-    public ResponseEntity<?> addAdmins(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+    public ResponseEntity<?> addAdmins(@PathVariable UUID groupId, @RequestBody List<String> userEmails) {
         try {
             String currentUsername = getAuthenticatedUsername();
-            groupService.addAdmins(groupId, usernames, currentUsername);
+            groupService.addAdmins(groupId, userEmails, currentUsername);
             return ResponseEntity.ok(Map.of(
                     "message", "Admins added successfully"
             ));
@@ -105,10 +114,10 @@ public class GroupController {
 
     @Operation(summary = "Demote admins to members")
     @PostMapping("/{groupId}/removeAdmins")
-    public ResponseEntity<?> removeAdmins(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+    public ResponseEntity<?> removeAdmins(@PathVariable UUID groupId, @RequestBody List<String> userEmails) {
         try {
             String currentUsername = getAuthenticatedUsername();
-            groupService.removeAdmins(groupId, usernames, currentUsername);
+            groupService.removeAdmins(groupId, userEmails, currentUsername);
             return ResponseEntity.ok(Map.of(
                     "message", "Admins demoted to members successfully"
             ));
@@ -120,36 +129,38 @@ public class GroupController {
     @Operation(summary = "Invite members using invite Link")
     @PostMapping("/{groupId}/invite")
     public ResponseEntity<?> generateInvite(@PathVariable UUID groupId, @RequestParam int minutesValid) {
-
-        String username = getAuthenticatedUsername();
-        String link = groupService.generateInviteLink(groupId, username, minutesValid);
-        return ResponseEntity.ok(Map.of(
-                "message", "Invite link generated",
-                "link", link
-        ));
+        try {
+            String username = getAuthenticatedUsername();
+            String link = groupService.generateInviteLink(groupId, username, minutesValid);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Invite link generated",
+                    "link", link
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error generating invite: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Join Group using invite link")
     @PostMapping("/joinByInviteCode")
     public ResponseEntity<?> joinGroup(@RequestParam String token) {
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.status(401).body("User must be logged in");
+        try {
+            String username = getAuthenticatedUsername();
+            groupService.joinGroupByInvite(token, username);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Joined group successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error joining group: " + e.getMessage());
         }
-        String username = auth.getName();
-        groupService.joinGroupByInvite(token, username);
-        return ResponseEntity.ok(Map.of(
-                "message", "Joined group successfully"
-        ));
     }
 
     @Operation(summary = "Remove members/admins from group")
     @PostMapping("/{groupId}/removeUsers")
-    public ResponseEntity<?> removeUsers(@PathVariable UUID groupId, @RequestBody List<String> usernames) {
+    public ResponseEntity<?> removeUsers(@PathVariable UUID groupId, @RequestBody List<String> userEmails) {
         try {
             String currentUsername = getAuthenticatedUsername();
-            groupService.removeUsers(groupId, usernames, currentUsername);
+            groupService.removeUsers(groupId, userEmails, currentUsername);
             return ResponseEntity.ok(Map.of(
                     "message", "Users removed successfully"
             ));
@@ -158,12 +169,34 @@ public class GroupController {
         }
     }
 
-    private String getAuthenticatedUsername() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
-            throw new RuntimeException("User must be logged in");
+    @Operation(summary = "Update Group Details")
+    @PutMapping("/{groupId}/update")
+    public ResponseEntity<?> updateGroupDetails(@PathVariable UUID groupId, @RequestBody GroupCreateDTO groupCreateDTO) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+            GroupResponseDTO updatedGroup = groupService.updateGroupDetails(groupId, groupCreateDTO, currentUsername);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Group details updated successfully",
+                    "group", updatedGroup
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error updating group details: " + e.getMessage());
         }
-        return authentication.getName();
+    }
+    
+    @Operation(summary = "assign a form to a group")
+    @PostMapping("/{groupId}/assignForm/{formId}")
+    public ResponseEntity<?> assignFormToGroup(@PathVariable UUID groupId, @PathVariable UUID formId) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+            int assignedUsers = groupService.assignFormToGroup(groupId, formId, currentUsername);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Form assigned to group successfully",
+                    "assignedUsers", assignedUsers
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error assigning form: " + e.getMessage());
+        }
     }
 
 }

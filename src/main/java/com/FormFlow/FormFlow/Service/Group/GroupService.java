@@ -3,18 +3,29 @@ package com.FormFlow.FormFlow.Service.Group;
 import com.FormFlow.FormFlow.DTO.Group.GroupCreateDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupResponseDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupUser;
+import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.GroupEntity.Group;
 import com.FormFlow.FormFlow.Entity.GroupEntity.GroupInvite;
 import com.FormFlow.FormFlow.Entity.User;
+import com.FormFlow.FormFlow.Entity.UserFormRole;
+import com.FormFlow.FormFlow.Repository.FormRepository;
 import com.FormFlow.FormFlow.Repository.Group.GroupInviteRepository;
 import com.FormFlow.FormFlow.Repository.Group.GroupRepository;
+import com.FormFlow.FormFlow.Repository.UserFormRoleRepository;
 import com.FormFlow.FormFlow.Repository.UserRepository;
+import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -27,6 +38,12 @@ public class GroupService {
 
     @Autowired
     private GroupInviteRepository inviteRepository;
+
+    @Autowired
+    private FormRepository formRepository;
+
+    @Autowired
+    private UserFormRoleRepository userFormRoleRepository;
 
     @Transactional
     public Group createGroup(GroupCreateDTO groupCreateDTO, String username) {
@@ -114,13 +131,16 @@ public class GroupService {
         if (currentUser == null) {
             throw new RuntimeException("User not found");
         }
-        if (!group.getOwner().equals(currentUser) && !group.getAdmins().contains(currentUser)) {
+        if (!isOwnerOrAdmin(group, currentUser)) {
             throw new RuntimeException("Only Owner or Admin can add members");
         }
         for (String email : emails) {
+            if (email == null || email.trim().isEmpty()) {
+                continue;
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-            if (group.getMembers().contains(user)) {
+            if (containsUserById(group.getMembers(), user)) {
                 continue;
             }
             if (group.getMembers().size() >= group.getMaxMembers()) {
@@ -133,22 +153,23 @@ public class GroupService {
     }
 
     @Transactional
-    public void addAdmins(UUID groupId, List<String> usernames, String currentUsername) {
+    public void addAdmins(UUID groupId, List<String> userEmails, String currentUsername) {
 
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
         if (currentUser == null) {
             throw new RuntimeException("User not found");
         }
-        if (!group.getOwner().equals(currentUser)) {
+        if (!isSameUser(group.getOwner(), currentUser)) {
             throw new RuntimeException("Only Owner can assign admins");
         }
-        for (String username : usernames) {
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                throw new RuntimeException("User not found: " + username);
+        for (String userEmail : userEmails) {
+            if (userEmail == null || userEmail.trim().isEmpty()) {
+                continue;
             }
-            if (!group.getMembers().contains(user)) {
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
+            if (!containsUserById(group.getMembers(), user)) {
                 if (group.getMembers().size() >= group.getMaxMembers()) {
                     throw new RuntimeException("Group member limit reached");
                 }
@@ -161,24 +182,25 @@ public class GroupService {
     }
 
     @Transactional
-    public void removeAdmins(UUID groupId, List<String> usernames, String currentUsername) {
+    public void removeAdmins(UUID groupId, List<String> userEmails, String currentUsername) {
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
         if (currentUser == null) {
             throw new RuntimeException("User not found");
         }
-        if (!group.getOwner().equals(currentUser)) {
+        if (!isSameUser(group.getOwner(), currentUser)) {
             throw new RuntimeException("Only Owner can demote admins");
         }
-        for (String username : usernames) {
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                throw new RuntimeException("User not found: " + username);
+        for (String userEmail : userEmails) {
+            if (userEmail == null || userEmail.trim().isEmpty()) {
+                continue;
             }
-            if (user.equals(group.getOwner())) {
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
+            if (isSameUser(user, group.getOwner())) {
                 throw new RuntimeException("Owner cannot be demoted");
             }
-            group.getAdmins().remove(user);
+            removeUserById(group.getAdmins(), user);
         }
         group.setUpdatedAt(LocalDateTime.now());
         groupRepository.save(group);
@@ -189,8 +211,14 @@ public class GroupService {
 
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
+        if (currentUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        if (minutesValid <= 0) {
+            throw new RuntimeException("Invite validity must be greater than 0 minutes");
+        }
 
-        if (!group.getOwner().equals(currentUser) && !group.getAdmins().contains(currentUser)) {
+        if (!isOwnerOrAdmin(group, currentUser)) {
             throw new RuntimeException("Only admin/owner can generate invite link");
         }
         String token = UUID.randomUUID().toString();
@@ -217,11 +245,14 @@ public class GroupService {
             throw new RuntimeException("Invite link expired");
         }
         Group group = invite.getGroup();
+        if (group == null || group.isDeleted()) {
+            throw new RuntimeException("Group not found");
+        }
         User user = userRepository.findByUsername(username);
         if (user == null) {
             throw new RuntimeException("User not found");
         }
-        if (group.getMembers().contains(user)) {
+        if (containsUserById(group.getMembers(), user)) {
             return;
         }
         if (group.getMembers().size() >= group.getMaxMembers()) {
@@ -233,31 +264,157 @@ public class GroupService {
     }
 
     @Transactional
-    public void removeUsers(UUID groupId, List<String> usernames, String currentUsername) {
+    public void removeUsers(UUID groupId, List<String> userEmails, String currentUsername) {
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
         if (currentUser == null) {
             throw new RuntimeException("User not found");
         }
-        if (!group.getOwner().equals(currentUser) && !group.getAdmins().contains(currentUser)) {
+        if (!isOwnerOrAdmin(group, currentUser)) {
             throw new RuntimeException("Only Owner/Admin can remove users");
         }
-        for (String username : usernames) {
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                throw new RuntimeException("User not found: " + username);
+        for (String userEmail : userEmails) {
+            if (userEmail == null || userEmail.trim().isEmpty()) {
+                continue;
             }
-            if (user.equals(group.getOwner())) {
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
+            if (isSameUser(user, group.getOwner())) {
                 throw new RuntimeException("Owner cannot be removed");
             }
-            if (group.getAdmins().contains(user) && !group.getOwner().equals(currentUser)) {
+            if (containsUserById(group.getAdmins(), user) && !isSameUser(group.getOwner(), currentUser)) {
                 throw new RuntimeException("Only Owner can remove an admin");
             }
-            group.getAdmins().remove(user);
-            group.getMembers().remove(user);
+            removeUserById(group.getAdmins(), user);
+            removeUserById(group.getMembers(), user);
         }
         group.setUpdatedAt(LocalDateTime.now());
         groupRepository.save(group);
     }
 
+    public GroupResponseDTO updateGroupDetails(UUID groupId, GroupCreateDTO groupCreateDTO, String currentUsername) {
+        Group group = getGroupOrThrow(groupId);
+        User currentUser = userRepository.findByUsername(currentUsername);
+        if (currentUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        if (!isSameUser(group.getOwner(), currentUser)) {
+            throw new RuntimeException("Only Owner can update group details");
+        }
+        if (groupCreateDTO.getGroupName() != null && !groupCreateDTO.getGroupName().trim().isEmpty()) {
+            group.setGroupName(groupCreateDTO.getGroupName());
+        }
+        if (groupCreateDTO.getDescription() != null) {
+            group.setDescription(groupCreateDTO.getDescription());
+        }
+        if (groupCreateDTO.getImageUrl() != null) {
+            group.setImageUrl(groupCreateDTO.getImageUrl());
+        }
+        if (groupCreateDTO.getIsPrivate() != null) {
+            group.setPrivate(groupCreateDTO.getIsPrivate());
+        }
+        if (groupCreateDTO.getMaxMembers() != null) {
+            if (groupCreateDTO.getMaxMembers() < group.getMembers().size()) {
+                throw new RuntimeException("Max members cannot be less than current member count");
+            }
+            group.setMaxMembers(groupCreateDTO.getMaxMembers());
+        }
+        group.setUpdatedAt(LocalDateTime.now());
+        Group updatedGroup = groupRepository.save(group);
+        return mapToGroupResponseDTO(updatedGroup);
+    }
+
+    @Transactional
+    public int assignFormToGroup(UUID groupId, UUID formId, String currentUsername) {
+        Group group = getGroupOrThrow(groupId);
+        User currentUser = userRepository.findByUsername(currentUsername);
+        if (currentUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        if (!isOwnerOrAdmin(group, currentUser)) {
+            throw new RuntimeException("Only Owner/Admin can assign forms to this group");
+        }
+
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        if (form.isDeleted()) {
+            throw new RuntimeException("Form not found");
+        }
+        if (!isSameUser(form.getUser(), currentUser)) {
+            throw new RuntimeException("Only Form Owner can assign this form to a group");
+        }
+
+        Map<UUID, User> targetUsersById = new HashMap<>();
+        addUsersById(targetUsersById, group.getMembers());
+        addUsersById(targetUsersById, group.getAdmins());
+        addUsersById(targetUsersById, Set.of(group.getOwner()));
+
+        List<UserFormRole> existingRoles = userFormRoleRepository.findByFormId(formId);
+        Set<UUID> existingUserIds = new HashSet<>();
+        for (UserFormRole role : existingRoles) {
+            if (role.getUser() != null) {
+                existingUserIds.add(role.getUser().getUserId());
+            }
+        }
+
+        List<UserFormRole> toSave = new ArrayList<>();
+        for (User user : targetUsersById.values()) {
+            if (isSameUser(user, form.getUser())) {
+                continue;
+            }
+            if (existingUserIds.contains(user.getUserId())) {
+                continue;
+            }
+
+            UserFormRole role = new UserFormRole();
+            role.setUser(user);
+            role.setForm(form);
+            role.setRole(RoleType.RESPONDER);
+            role.setViewed(false);
+            role.setAssignedAt(LocalDateTime.now());
+            role.setAssignedBy(currentUsername);
+            toSave.add(role);
+        }
+
+        if (!toSave.isEmpty()) {
+            userFormRoleRepository.saveAll(toSave);
+        }
+
+        return toSave.size();
+    }
+
+    private boolean isOwnerOrAdmin(Group group, User user) {
+        return isSameUser(group.getOwner(), user) || containsUserById(group.getAdmins(), user);
+    }
+
+    private void addUsersById(Map<UUID, User> usersById, Collection<User> users) {
+        for (User user : users) {
+            if (user != null && user.getUserId() != null) {
+                usersById.putIfAbsent(user.getUserId(), user);
+            }
+        }
+    }
+
+    private boolean containsUserById(Collection<User> users, User target) {
+        if (target == null || target.getUserId() == null) {
+            return false;
+        }
+        UUID targetId = target.getUserId();
+        return users.stream().anyMatch(user -> user != null && targetId.equals(user.getUserId()));
+    }
+
+    private void removeUserById(Set<User> users, User target) {
+        if (target == null || target.getUserId() == null) {
+            return;
+        }
+        UUID targetId = target.getUserId();
+        users.removeIf(user -> user != null && targetId.equals(user.getUserId()));
+    }
+
+    private boolean isSameUser(User userA, User userB) {
+        if (userA == null || userB == null || userA.getUserId() == null || userB.getUserId() == null) {
+            return false;
+        }
+        return userA.getUserId().equals(userB.getUserId());
+    }
 }
