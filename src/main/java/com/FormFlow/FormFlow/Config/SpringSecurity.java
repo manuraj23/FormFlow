@@ -56,7 +56,7 @@ public class SpringSecurity {
                                 "/error"
                         )).permitAll()
 
-                        .requestMatchers(allMatchers("/user/**", "/group/**")).authenticated()
+                        .requestMatchers(allMatchers("/user/**", "/group/**","/api/**")).authenticated()
                         .requestMatchers(allMatchers("/admin/**")).hasRole("ADMIN")
 
                         .anyRequest().denyAll()
