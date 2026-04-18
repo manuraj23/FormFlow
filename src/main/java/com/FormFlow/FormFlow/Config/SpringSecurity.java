@@ -1,6 +1,7 @@
 package com.FormFlow.FormFlow.Config;
 import com.FormFlow.FormFlow.Filters.JwtFilter;
 import com.FormFlow.FormFlow.Service.UserDetailServiceImpl;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -52,7 +53,7 @@ public class SpringSecurity {
                                 "/public/**",
                                 "/uploads/**",
                                 "/oauth2/**",
-                                "/health",
+                                "/health/**",
                                 "/error"
                         )).permitAll()
 
@@ -60,6 +61,11 @@ public class SpringSecurity {
                         .requestMatchers(allMatchers("/admin/**")).hasRole("ADMIN")
 
                         .anyRequest().denyAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        })
                 )
                 .oauth2Login(oauth -> oauth
                         .successHandler(oAuth2SuccessHandler)
