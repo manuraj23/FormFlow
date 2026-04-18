@@ -11,6 +11,7 @@ import com.FormFlow.FormFlow.Repository.User.PasswordResetTempRepository;
 import com.FormFlow.FormFlow.Repository.User.TempUserRepository;
 import com.FormFlow.FormFlow.Repository.UserRepository;
 import com.FormFlow.FormFlow.Service.Email.ResetPasswordEmailService;
+import com.FormFlow.FormFlow.Service.Email.SendGridEmailService;
 import com.FormFlow.FormFlow.Service.Email.VarifyAccountEmailService;
 import com.FormFlow.FormFlow.Utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,9 @@ public class AuthService {
 
     @Autowired
     private ResetPasswordEmailService resetPasswordEmailService;
+
+    @Autowired
+    private SendGridEmailService sendGridEmailService;
 
     private static final PasswordEncoder passwordEncoder= new BCryptPasswordEncoder();
 
@@ -120,7 +124,7 @@ public class AuthService {
             tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
             tempUser.setCreatedAt(LocalDateTime.now());
             tempUserRepository.save(tempUser);
-            varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
+            sendGridEmailService.varifyAccountOtpSent(signUpDTOnew.getEmail(), otp);
             return;
         }
 
@@ -136,62 +140,9 @@ public class AuthService {
         tempUser.setCreatedAt(LocalDateTime.now());
         tempUserRepository.save(tempUser);
 
-        varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
+        sendGridEmailService.varifyAccountOtpSent(signUpDTOnew.getEmail(), otp);
     }
 
-//    @Transactional
-//    public void saveNewUserNew(SignUpDTOnew signUpDTOnew) {
-//
-//        if(userRepository.existsByUsername(signUpDTOnew.getUsername()))
-//            throw new IllegalStateException("Username already exists");
-//
-//        if(userRepository.existsByEmail(signUpDTOnew.getEmail()))
-//            throw new IllegalStateException("Email already exists");
-//
-//        Optional<TempUser> existing = tempUserRepository.findByEmail(signUpDTOnew.getEmail());
-//
-//        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
-//
-//        if(existing.isPresent()){
-//            TempUser tempUser = existing.get();
-//
-//            // 🔒 Rate limiting
-//            if(tempUser.getCreatedAt() != null &&
-//                    tempUser.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(30))) {
-//                throw new IllegalStateException("Please wait 30 seconds before requesting another OTP");
-//            }
-//
-//            // ✅ Check expiry BEFORE updating
-//            boolean expired = tempUser.getOtpExpiry() != null &&
-//                    tempUser.getOtpExpiry().isBefore(LocalDateTime.now());
-//
-//            if(expired) {
-//                tempUser.setOtpAttempts(0);
-//            }
-//
-//            tempUser.setEmail(signUpDTOnew.getEmail());
-//            tempUser.setUsername(signUpDTOnew.getUsername());
-//            tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
-//            tempUser.setOtp(otp);
-//            tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
-//            tempUser.setCreatedAt(LocalDateTime.now());
-//
-//            tempUserRepository.save(tempUser);
-//            varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
-//            return;
-//        }
-//
-//        TempUser tempUser = new TempUser();
-//        tempUser.setEmail(signUpDTOnew.getEmail());
-//        tempUser.setUsername(signUpDTOnew.getUsername());
-//        tempUser.setPassword(passwordEncoder.encode(signUpDTOnew.getPassword()));
-//        tempUser.setOtp(otp);
-//        tempUser.setOtpAttempts(0);
-//        tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
-//        tempUser.setCreatedAt(LocalDateTime.now());
-//        tempUserRepository.save(tempUser);
-//        varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
-//    }
 
     public void resendOtpVerifyAccount(String email) {
         TempUser tempUser = tempUserRepository.findByEmail(email)
@@ -205,7 +156,7 @@ public class AuthService {
         tempUser.setOtpAttempts(0);
         tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         tempUserRepository.save(tempUser);
-        varifyAccountEmailService.sendOtp(email, otp);
+        sendGridEmailService.varifyAccountOtpSent(email, otp);
     }
 
     @Transactional
@@ -267,7 +218,7 @@ public class AuthService {
             existingUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
             existingUser.setVerified(false);
             passwordResetTempRepository.save(existingUser);
-            resetPasswordEmailService.sendOtp(email, otp);
+            sendGridEmailService.resetPasswordOtpSent(email, otp);
             return user.getEmail();
         }
 
@@ -278,7 +229,7 @@ public class AuthService {
         temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         temp.setVerified(false);
         passwordResetTempRepository.save(temp);
-        resetPasswordEmailService.sendOtp(email, otp);
+        sendGridEmailService.resetPasswordOtpSent(email, otp);
         return user.getEmail();
     }
 
@@ -355,6 +306,6 @@ public class AuthService {
         temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         temp.setVerified(false);
         passwordResetTempRepository.save(temp);
-        resetPasswordEmailService.sendOtp(email, otp);
+        sendGridEmailService.resetPasswordOtpSent(email, otp);
     }
 }
