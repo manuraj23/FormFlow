@@ -48,6 +48,10 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}
+  from-email: ${SPRING_MAIL_USERNAME}
+
 server:
   port: 8082
   servlet:
