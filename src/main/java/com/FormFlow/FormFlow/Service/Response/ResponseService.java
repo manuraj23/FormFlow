@@ -97,7 +97,10 @@ public class ResponseService {
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
         Map<String, Object> settings = form.getSettings();
 
-        if (settings != null && Boolean.TRUE.equals(settings.get("isQuiz"))) {
+        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
+                || Boolean.TRUE.equals(settings.get("isQuiz"));
+
+        if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
             score = ((Number) evaluation.get("totalScore")).doubleValue();
         }
@@ -109,7 +112,8 @@ public class ResponseService {
         entity.setEvaluation(evaluation);
 
         FormResponse saved = repository.save(entity);
-        boolean showScore = settings != null && Boolean.TRUE.equals(settings.get("scoreShow"));
+        boolean showScore = settings != null &&
+                Boolean.parseBoolean(String.valueOf(settings.get("showScore")));
 
         FormResponseDTO responseDTO = mapToDTO(saved);
 
@@ -534,11 +538,11 @@ public class ResponseService {
 
         for (FormSection section : sections) {
 
-            BigDecimal positiveBD = section.getPositiveMarks();
-            BigDecimal negativeBD = section.getNegativeMarks();
+            double positive = section.getPositiveMarks() != null
+                    ? section.getPositiveMarks().doubleValue() : 0;
 
-            double positive = positiveBD != null ? positiveBD.doubleValue() : 0;
-            double negative = negativeBD != null ? negativeBD.doubleValue() : 0;
+            double negative = section.getNegativeMarks() != null
+                    ? section.getNegativeMarks().doubleValue() : 0;
 
             for (FormFields field : section.getFields()) {
 
@@ -546,13 +550,14 @@ public class ResponseService {
                 if (config == null) continue;
 
                 Object correctAnswer = config.get("answer");
-                if (correctAnswer == null) continue; // not a quiz field
+                if (correctAnswer == null) continue;
 
                 String fieldId = field.getId().toString();
                 Object userAnswer = responseMap.get(fieldId);
 
                 boolean isCorrect = userAnswer != null &&
-                        userAnswer.toString().equals(correctAnswer.toString());
+                        userAnswer.toString().trim()
+                                .equalsIgnoreCase(String.valueOf(correctAnswer).trim());
 
                 Map<String, Object> result = new HashMap<>();
                 result.put("correct", isCorrect);
@@ -562,14 +567,13 @@ public class ResponseService {
 
                 if (isCorrect) {
                     totalScore += positive;
-                } else {
+                } else if (userAnswer != null && !userAnswer.toString().isEmpty()) {
                     totalScore -= negative;
                 }
             }
         }
 
         evaluation.put("totalScore", totalScore);
-
         return evaluation;
     }
 }
