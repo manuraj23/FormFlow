@@ -91,6 +91,11 @@ public class UserService {
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());
+
+                        field.setQuizConfig(fieldDTO.getQuizConfig());
+                        field.setFieldLogic(fieldDTO.getFieldLogic());
+
+
                         field.setSection(section);
 
                         return field;
@@ -307,6 +312,9 @@ public class UserService {
                         fieldDTO.setFieldOrder(field.getFieldOrder());
                         fieldDTO.setFieldStyle(field.getFieldStyle());
                         fieldDTO.setFieldConfig(field.getFieldConfig());
+
+                        fieldDTO.setQuizConfig(field.getQuizConfig());
+                        fieldDTO.setFieldLogic(field.getFieldLogic());
                         return fieldDTO;
                     }).toList());
                 }
