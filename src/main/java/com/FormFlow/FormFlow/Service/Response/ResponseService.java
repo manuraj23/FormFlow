@@ -533,42 +533,79 @@ public class ResponseService {
         Map<String, Object> evaluation = new HashMap<>();
         double totalScore = 0;
 
-        List<FormSection> sections = formSectionRepository
-                .findByFormIdInWithFields(List.of(formId));
+        List<FormSection> sections =
+                formSectionRepository.findByFormIdInWithFields(List.of(formId));
 
         for (FormSection section : sections) {
 
-            double positive = section.getPositiveMarks() != null
-                    ? section.getPositiveMarks().doubleValue() : 0;
-
-            double negative = section.getNegativeMarks() != null
-                    ? section.getNegativeMarks().doubleValue() : 0;
-
             for (FormFields field : section.getFields()) {
 
-                Map<String, Object> config = field.getFieldConfig();
-                if (config == null) continue;
+                Map<String, Object> quizConfig = field.getQuizConfig();
+                if (quizConfig == null || quizConfig.isEmpty()) {
+                    continue;
+                }
 
-                Object correctAnswer = config.get("answer");
-                if (correctAnswer == null) continue;
+                if (!Boolean.TRUE.equals(quizConfig.get("isScored"))) {
+                    continue;
+                }
 
                 String fieldId = field.getId().toString();
-                Object userAnswer = responseMap.get(fieldId);
+                String label = (String) field.getFieldConfig().get("label");
 
-                boolean isCorrect = userAnswer != null &&
-                        userAnswer.toString().trim()
-                                .equalsIgnoreCase(String.valueOf(correctAnswer).trim());
+                Object rawAnswer = responseMap.get(fieldId);
 
-                Map<String, Object> result = new HashMap<>();
-                result.put("correct", isCorrect);
-                result.put("correctAnswer", correctAnswer);
+                if (rawAnswer == null && label != null) {
+                    rawAnswer = responseMap.get(label);
+                }
 
-                evaluation.put(fieldId, result);
+                if (rawAnswer == null) {
+                    continue;
+                }
+
+                List<String> userAnswers;
+
+                if (rawAnswer instanceof List) {
+                    userAnswers = ((List<?>) rawAnswer).stream()
+                            .map(String::valueOf)
+                            .map(String::trim)
+                            .toList();
+                } else {
+                    userAnswers = List.of(rawAnswer.toString().trim());
+                }
+
+                Object correctAnswer = quizConfig.get("correctAnswer");
+
+                double points = quizConfig.get("points") == null
+                        ? 0.0
+                        : ((Number) quizConfig.get("points")).doubleValue();
+
+                double negativeMarks = quizConfig.get("negativeMarks") == null
+                        ? 0.0
+                        : ((Number) quizConfig.get("negativeMarks")).doubleValue();
+
+                boolean isCorrect;
+
+                if (correctAnswer instanceof List) {
+
+                    Set<String> correctSet = ((List<?>) correctAnswer).stream()
+                            .map(String::valueOf)
+                            .map(String::trim)
+                            .collect(java.util.stream.Collectors.toSet());
+
+                    isCorrect = new HashSet<>(userAnswers).equals(correctSet);
+                }
+
+                else {
+                    String correct = String.valueOf(correctAnswer).trim();
+
+                    isCorrect = userAnswers.size() == 1 &&
+                            userAnswers.get(0).equalsIgnoreCase(correct);
+                }
 
                 if (isCorrect) {
-                    totalScore += positive;
-                } else if (userAnswer != null && !userAnswer.toString().isEmpty()) {
-                    totalScore -= negative;
+                    totalScore += points;
+                } else {
+                    totalScore -= negativeMarks;
                 }
             }
         }
@@ -577,4 +614,3 @@ public class ResponseService {
         return evaluation;
     }
 }
-
