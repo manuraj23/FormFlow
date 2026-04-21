@@ -26,23 +26,24 @@ public class healthCheck {
         return "FormFlow API is up and running!";
     }
 
-//    @GetMapping("/mailTest")
-//    public ResponseEntity<String> sendOtp() {
-//        try {
-//            SimpleMailMessage message = new SimpleMailMessage();
-//            message.setFrom(fromEmail);
-//            message.setTo("manuraj0642@gmail.com");
-//            message.setSubject("Mail test - FormFlow");
-//            message.setText(
-//                    "Email test runs fine "
-//            );
-//            mailSender.send(message);
-//            return ResponseEntity.ok("Mail test sent successfully.");
-//        } catch (Exception ex) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body("Mail test failed: " + ex.getMessage());
-//        }
-//    }
+    @GetMapping("/mailTestGmail")
+    public ResponseEntity<String> mailTest() {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo("manuraj0642@gmail.com");
+            message.setSubject("Mail test - FormFlow");
+            message.setText(
+                    "Email test runs fine "
+            );
+            mailSender.send(message);
+            return ResponseEntity.ok("Mail test sent successfully.");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Mail test failed: " + ex.getMessage());
+        }
+    }
+
     @Autowired
     public SendGridEmailService sendGridEmailService;
 
