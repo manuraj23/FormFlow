@@ -10,6 +10,7 @@ import java.util.UUID;
 @Data
 public class FormCreateDTO {
 
+    private UUID id;
     private String theme;
     private String title;
     private String description;

@@ -51,21 +51,16 @@ public class UserService {
             form.setMainParentId(dto.getMainParentId());
             Integer maxVersion = formRepository
                     .findMaxVersionByParentId(dto.getMainParentId());
+            form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
+            if(form.getVersionId() == 2){
 
-            form.setVersionId((maxVersion==null) ? 2 : maxVersion+ 1);
-
-            //Deactivate ALL previous versions (not just latest)
-            List<Form> allVersions = formRepository
-                    .findByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
-
-            for (Form f : allVersions) {
-                if (f.isPublished()) {
-                    f.setPublished(false);
-                }
             }
-
-            // Save all updates in one go
-            formRepository.saveAll(allVersions);
+            Form latest = formRepository
+                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
+            if (latest != null) {
+                latest.setPublished(false);
+                formRepository.save(latest);
+            }
 
         }else{
             form.setVersionId(1);
@@ -76,8 +71,6 @@ public class UserService {
                 FormSection section = new FormSection();
                 section.setSectionTitle(sectionDTO.getSectionTitle());
                 section.setSectionOrder(sectionDTO.getSectionOrder());
-                section.setPositiveMarks(sectionDTO.getPositiveMarks());
-                section.setNegativeMarks(sectionDTO.getNegativeMarks());
                 section.setForm(form);
 
                 if (sectionDTO.getFields() != null) {
@@ -86,8 +79,10 @@ public class UserService {
                         FormFields field = new FormFields();
 
                         try {
+                            String type = fieldDTO.getFieldType();
+
                             field.setFieldType(
-                                    FieldType.valueOf(fieldDTO.getFieldType().toUpperCase())
+                                    FieldType.valueOf(type.toUpperCase())
                             );
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
@@ -107,12 +102,14 @@ public class UserService {
         }
 
         formRepository.save(form);
-        if (form.getMainParentId() == null) {
+        if(form.getVersionId() == 1) {
             form.setMainParentId(form.getId());
             formRepository.save(form);
         }
 
     }
+
+
     @Transactional(readOnly = true)
     public List<FormGetDTO> getAllForms(String username) {
 
@@ -247,8 +244,6 @@ public class UserService {
             section.setSectionTitle(sectionDTO.getSectionTitle());
             section.setSectionOrder(sectionDTO.getSectionOrder());
             section.setForm(form);
-            section.setNegativeMarks(sectionDTO.getNegativeMarks());
-            section.setPositiveMarks(sectionDTO.getPositiveMarks());
 
             List<FormFields> fields = new ArrayList<>();
             for (FieldDTO fieldDTO : sectionDTO.getFields()) {
