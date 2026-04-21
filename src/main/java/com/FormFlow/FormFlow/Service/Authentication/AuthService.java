@@ -52,8 +52,8 @@ public class AuthService {
     @Autowired
     private ResetPasswordEmailService resetPasswordEmailService;
 
-    @Autowired
-    private SendGridEmailService sendGridEmailService;
+//    @Autowired
+//    private SendGridEmailService sendGridEmailService;
 
     private static final PasswordEncoder passwordEncoder= new BCryptPasswordEncoder();
 
@@ -124,7 +124,7 @@ public class AuthService {
             tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
             tempUser.setCreatedAt(LocalDateTime.now());
             tempUserRepository.save(tempUser);
-            sendGridEmailService.varifyAccountOtpSent(signUpDTOnew.getEmail(), otp);
+            varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
             return;
         }
 
@@ -140,7 +140,7 @@ public class AuthService {
         tempUser.setCreatedAt(LocalDateTime.now());
         tempUserRepository.save(tempUser);
 
-        sendGridEmailService.varifyAccountOtpSent(signUpDTOnew.getEmail(), otp);
+        varifyAccountEmailService.sendOtp(signUpDTOnew.getEmail(), otp);
     }
 
 
@@ -156,7 +156,7 @@ public class AuthService {
         tempUser.setOtpAttempts(0);
         tempUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         tempUserRepository.save(tempUser);
-        sendGridEmailService.varifyAccountOtpSent(email, otp);
+        varifyAccountEmailService.sendOtp(email, otp);
     }
 
     @Transactional
@@ -218,7 +218,7 @@ public class AuthService {
             existingUser.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
             existingUser.setVerified(false);
             passwordResetTempRepository.save(existingUser);
-            sendGridEmailService.resetPasswordOtpSent(email, otp);
+            resetPasswordEmailService.sendOtp(email, otp);
             return user.getEmail();
         }
 
@@ -229,7 +229,7 @@ public class AuthService {
         temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         temp.setVerified(false);
         passwordResetTempRepository.save(temp);
-        sendGridEmailService.resetPasswordOtpSent(email, otp);
+        resetPasswordEmailService.sendOtp(email, otp);
         return user.getEmail();
     }
 
@@ -306,6 +306,6 @@ public class AuthService {
         temp.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         temp.setVerified(false);
         passwordResetTempRepository.save(temp);
-        sendGridEmailService.resetPasswordOtpSent(email, otp);
+        resetPasswordEmailService.sendOtp(email, otp);
     }
 }
