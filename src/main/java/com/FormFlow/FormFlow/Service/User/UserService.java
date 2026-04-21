@@ -5,6 +5,7 @@ import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.Version.VersionResponseDTO;
+import com.FormFlow.FormFlow.DTO.UpdateFormDTO;
 import com.FormFlow.FormFlow.Entity.*;
 import com.FormFlow.FormFlow.Repository.*;
 import com.FormFlow.FormFlow.enums.FieldType;
@@ -196,7 +197,7 @@ public class UserService {
     }
 
     @Transactional
-    public boolean updateForm(UUID formId, FormCreateDTO dto, String username) {
+    public boolean updateForm(UUID formId, UpdateFormDTO dto, String username) {
 
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found with id: " + formId));
@@ -212,19 +213,18 @@ public class UserService {
         }
         List<FormResponse> responses = formResponseRepository.findByFormId(formId);
         if (responses != null && !responses.isEmpty()) {
-            return false; // Version control required
+            return false; // force versioning
         }
 
-        if (dto.getSections() == null || dto.getSections().isEmpty()) {
-            throw new RuntimeException("Form must contain at least one section");
-        }
+        if (dto.getTitle() != null) form.setTitle(dto.getTitle());
+        if (dto.getTheme() != null) form.setTheme(dto.getTheme());
+        if (dto.getDescription() != null) form.setDescription(dto.getDescription());
 
-        form.setTitle(dto.getTitle() != null ? dto.getTitle() : form.getTitle());
-        form.setTheme(dto.getTheme() != null ? dto.getTheme() : form.getTheme());
-        form.setDescription(dto.getDescription() != null ? dto.getDescription() : form.getDescription());
         form.setPublished(dto.isPublished());
-        form.setSettings(dto.getSettings() != null ? dto.getSettings() : form.getSettings());
+
         if (dto.getSettings() != null) {
+            form.setSettings(dto.getSettings());
+
             Object deadlineObj = dto.getSettings().get("deadline");
             if (deadlineObj != null) {
                 try {
@@ -234,15 +234,23 @@ public class UserService {
                 }
             }
         }
+
+        if (dto.getSections() == null || dto.getSections().isEmpty()) {
+            throw new RuntimeException("Form must contain at least one section");
+        }
+
         if (form.getSections() != null) {
-            form.getSections().clear(); // Hibernate tracks these as orphans now
+            form.getSections().clear();
         } else {
             form.setSections(new ArrayList<>());
         }
 
         for (SectionDTO sectionDTO : dto.getSections()) {
+
             if (sectionDTO.getFields() == null || sectionDTO.getFields().isEmpty()) {
-                throw new RuntimeException("Section '" + sectionDTO.getSectionTitle() + "' must have at least one field");
+                throw new RuntimeException(
+                        "Section '" + sectionDTO.getSectionTitle() + "' must have at least one field"
+                );
             }
 
             FormSection section = new FormSection();
@@ -251,39 +259,43 @@ public class UserService {
             section.setForm(form);
 
             List<FormFields> fields = new ArrayList<>();
+
             for (FieldDTO fieldDTO : sectionDTO.getFields()) {
+
                 FormFields field = new FormFields();
+
                 try {
                     field.setFieldType(FieldType.valueOf(fieldDTO.getFieldType().toUpperCase()));
-                } catch (IllegalArgumentException e) {
-                    throw new RuntimeException(
-                            "Invalid field type '" + fieldDTO.getFieldType() +
-                                    "' in section '" + sectionDTO.getSectionTitle() + "'"
-                    );
+                } catch (Exception e) {
+                    throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                 }
+
                 field.setFieldOrder(fieldDTO.getFieldOrder());
 
-                field.setFieldConfig(fieldDTO.getFieldConfig() != null ? fieldDTO.getFieldConfig() : Collections.emptyMap());
-                field.setFieldStyle(fieldDTO.getFieldStyle() != null ? fieldDTO.getFieldStyle() : Collections.emptyMap());
+                field.setFieldConfig(
+                        fieldDTO.getFieldConfig() != null ? fieldDTO.getFieldConfig() : new HashMap<>()
+                );
+
+                field.setFieldStyle(
+                        fieldDTO.getFieldStyle() != null ? fieldDTO.getFieldStyle() : new HashMap<>()
+                );
+
+                field.setQuizConfig(fieldDTO.getQuizConfig());
+                field.setFieldLogic(fieldDTO.getFieldLogic());
+
                 field.setSection(section);
+
                 fields.add(field);
             }
 
             section.setFields(fields);
-
-            form.getSections().add(section); // Add to existing mutable list
+            form.getSections().add(section);
         }
 
-        try {
-            formRepository.saveAndFlush(form);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to save form: " + e.getMessage(), e);
-        }
+        formRepository.saveAndFlush(form);
 
         return true;
     }
-
 
     private FormGetDTO convertToDTO(Form form) {
         FormGetDTO dto = new FormGetDTO();
@@ -312,7 +324,6 @@ public class UserService {
                         fieldDTO.setFieldOrder(field.getFieldOrder());
                         fieldDTO.setFieldStyle(field.getFieldStyle());
                         fieldDTO.setFieldConfig(field.getFieldConfig());
-
                         fieldDTO.setQuizConfig(field.getQuizConfig());
                         fieldDTO.setFieldLogic(field.getFieldLogic());
                         return fieldDTO;

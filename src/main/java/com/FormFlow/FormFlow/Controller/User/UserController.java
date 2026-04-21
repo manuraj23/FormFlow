@@ -3,6 +3,7 @@ package com.FormFlow.FormFlow.Controller.User;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.Version.SwitchVersionRequest;
+import com.FormFlow.FormFlow.DTO.UpdateFormDTO;
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
 import com.FormFlow.FormFlow.Service.User.FormAccessService;
 import com.FormFlow.FormFlow.Service.User.UserService;
@@ -104,7 +105,7 @@ public class UserController {
 
     @Operation(summary = "Update a form by ID (if no responses exist)")
     @PutMapping("/updateForm/{id}")
-    public ResponseEntity<?> updateForm(@PathVariable UUID id, @RequestBody FormCreateDTO dto) {
+    public ResponseEntity<?> updateForm(@PathVariable UUID id, @RequestBody UpdateFormDTO dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         try {
