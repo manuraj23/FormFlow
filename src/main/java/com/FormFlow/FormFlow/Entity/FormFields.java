@@ -19,9 +19,19 @@ import java.util.UUID;
 @AllArgsConstructor
 public class FormFields {
 
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.UUID)
+//    private UUID id;
+
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
+        }
+    }
 
     @Enumerated(EnumType.STRING)
     private FieldType fieldType;
@@ -36,6 +46,10 @@ public class FormFields {
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> fieldStyle;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> fieldLogic;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id")
     @JsonIgnore
@@ -45,8 +59,5 @@ public class FormFields {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> quizConfig;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> fieldLogic;
 
 }

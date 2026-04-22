@@ -28,6 +28,7 @@ public class ResponseService {
     private final FormRepository formRepository;
     private final UserRepository userRepository;
     private final UserFormRoleRepository userFormRoleRepository;
+    private final ConditionalLogicService conditionalLogicService;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
@@ -37,14 +38,15 @@ public class ResponseService {
                            FormSectionRepository formSectionRepository,
                            FormRepository formRepository,
                            UserRepository userRepository,
-                           UserFormRoleRepository userFormRoleRepository
+                           UserFormRoleRepository userFormRoleRepository,
+                           ConditionalLogicService conditionalLogicService
                          ) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
         this.formRepository = formRepository;
         this.userRepository=userRepository;
         this.userFormRoleRepository=userFormRoleRepository;
-
+        this.conditionalLogicService=conditionalLogicService;
     }
 
     // updated to accept files alongside response data
@@ -243,6 +245,14 @@ public class ResponseService {
         // fetch all sections with fields eagerly loaded in one query
         List<FormSection> sections = formSectionRepository
                 .findByFormIdInWithFields(List.of(formId));
+        // build fieldId -> FormFields map for recursive chain resolution
+        Map<String, FormFields> fieldMap = sections.stream()
+                .flatMap(s -> s.getFields().stream())
+                .filter(f -> f.getId() != null)
+                .collect(Collectors.toMap(
+                        f -> f.getId().toString(),
+                        f -> f
+                ));
         // count FILE fields in this form
         long fileFieldCount = sections.stream()
                 .flatMap(s -> s.getFields().stream())
@@ -266,6 +276,24 @@ public class ResponseService {
 
             for (FormFields field : fields) {
 
+                String fieldId = field.getId() != null ? field.getId().toString() : null;
+
+                //  skip field if its condition makes it inactive
+                /*Object fieldLogic = field.getFieldLogic();
+                boolean fieldActive = conditionalLogicService.isActive(fieldLogic, submittedResponse);*/
+                boolean fieldActive = conditionalLogicService.isActive(
+                        field.getFieldLogic(),
+                        submittedResponse,
+                        fieldMap
+                );
+                if (!fieldActive) {
+                    if (fieldId != null) {
+                        submittedResponse.remove(fieldId);
+                    }
+                    continue;
+                }
+
+
                 Map<String, Object> config = field.getFieldConfig();
                 if (config == null) continue;
 
@@ -278,7 +306,7 @@ public class ResponseService {
                 List<String> options = (List<String>) config.get("options");
 
                 // changed: looking up submitted value by field ID instead of label ***
-                String fieldId = field.getId() != null ? field.getId().toString() : null;
+               // String fieldId = field.getId() != null ? field.getId().toString() : null;
                 if (fieldId == null) continue;
 
                 Object submittedValue = submittedResponse.get(fieldId);
@@ -517,12 +545,12 @@ public class ResponseService {
                 .collect(Collectors.toList());
     }
     public Map<String, Long> getUniqueAssignees(UUID formId) {
-        long count = userFormRoleRepository.countByFormIdAndRole(formId, RoleType.RESPONDER);
+        long count = userFormRoleRepository.countDistinctAssigneesByFormIdAndRole(formId, RoleType.RESPONDER);
         return Map.of("count", count);
     }
 
     public Map<String, Long> getUniqueRespondents(UUID formId) {
-        long count = repository.countDistinctUserByForm_Id(formId);
+        long count = repository.countDistinctRespondentsByFormId(formId);
         return Map.of("count", count);
     }
 
