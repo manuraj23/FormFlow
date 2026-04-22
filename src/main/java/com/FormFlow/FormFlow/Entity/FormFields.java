@@ -59,8 +59,5 @@ public class FormFields {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> quizConfig;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> fieldLogic;
 
 }
