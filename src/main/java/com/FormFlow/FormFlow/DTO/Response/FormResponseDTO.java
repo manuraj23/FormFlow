@@ -14,5 +14,6 @@ public class FormResponseDTO {
     private String username;
     private Map<String, Object> response;
     private LocalDateTime submittedAt;
-
+    private Double score;
+    private Map<String, Object> evaluation;
 }

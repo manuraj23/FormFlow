@@ -3,6 +3,7 @@ package com.FormFlow.FormFlow.Controller.User;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormCreateDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.FormGetDTO;
 import com.FormFlow.FormFlow.DTO.FormDetails.Version.SwitchVersionRequest;
+import com.FormFlow.FormFlow.DTO.UpdateFormDTO;
 import com.FormFlow.FormFlow.DTO.User.FormAccessDTO;
 import com.FormFlow.FormFlow.Service.User.FormAccessService;
 import com.FormFlow.FormFlow.Service.User.UserService;
@@ -104,7 +105,7 @@ public class UserController {
 
     @Operation(summary = "Update a form by ID (if no responses exist)")
     @PutMapping("/updateForm/{id}")
-    public ResponseEntity<?> updateForm(@PathVariable UUID id, @RequestBody FormCreateDTO dto) {
+    public ResponseEntity<?> updateForm(@PathVariable UUID id, @RequestBody UpdateFormDTO dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         try {
@@ -112,7 +113,7 @@ public class UserController {
             if (updated) {
                 return new ResponseEntity<>("Form Updated Successfully", HttpStatus.OK);
             } else {
-                return new ResponseEntity<>("Version control is remaining", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Can not edit form(Create new version to update)", HttpStatus.BAD_REQUEST);
             }
         } catch (Exception e) {
             return new ResponseEntity<>("Error Updating Form: " + e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -169,6 +170,14 @@ public class UserController {
         userService.switchVersion(formId, request.getVersionId(), username);
 
         return ResponseEntity.ok("version switched successfully");
+    }
+
+    @PatchMapping("/version/delete/{id}")
+    public ResponseEntity<?> deleteAllVersions(@PathVariable UUID id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        userService.deleteAllVersions(id);
+        return ResponseEntity.ok("All Form Version Deleted");
     }
 
 }

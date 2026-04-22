@@ -65,4 +65,10 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
     WHERE f.mainParentId = :parentId 
     """)
     void deactivateAllVersions(@Param("parentId") UUID parentId);
+
+    List<Form> findByMainParentId(UUID mainParentId);
+
+    @Modifying
+    @Query("UPDATE Form f SET f.isDeleted = true WHERE f.mainParentId = :parentId")
+    void softDeleteByMainParentId(@Param("parentId") UUID parentId);
 }
