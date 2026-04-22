@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
@@ -195,6 +196,16 @@ public class AuthController {
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
         }
+    }
+
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<?> handleMailException(MailException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                Map.of(
+                        "message", "Unable to send OTP email right now. Please try again shortly.",
+                        "error", "MAIL_SERVICE_UNAVAILABLE"
+                )
+        );
     }
 
 }

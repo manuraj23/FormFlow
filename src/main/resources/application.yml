@@ -53,7 +53,7 @@ sendgrid:
   from-email: ${SPRING_MAIL_USERNAME}
 
 server:
-  port: ${PORT:8082}
+  port: ${PORT:8080}
   servlet:
     context-path: /formflow
   forward-headers-strategy: framework

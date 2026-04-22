@@ -30,6 +30,12 @@ public class FormResponse {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> response;
 
+    // null for public form submissions
+    // populated when form isPrivate: true and user is authenticated
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
+
     private LocalDateTime submittedAt;
 
     private Double score;

@@ -1,13 +1,9 @@
 package com.FormFlow.FormFlow.Service.Response;
 
 import com.FormFlow.FormFlow.DTO.Response.FormResponseDTO;
-import com.FormFlow.FormFlow.Entity.Form;
-import com.FormFlow.FormFlow.Entity.FormFields;
-import com.FormFlow.FormFlow.Entity.FormResponse;
-import com.FormFlow.FormFlow.Entity.FormSection;
-import com.FormFlow.FormFlow.Repository.FormRepository;
-import com.FormFlow.FormFlow.Repository.FormResponseRepository;
-import com.FormFlow.FormFlow.Repository.FormSectionRepository;
+import com.FormFlow.FormFlow.Entity.*;
+import com.FormFlow.FormFlow.Repository.*;
+import com.FormFlow.FormFlow.enums.RoleType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +26,8 @@ public class ResponseService {
     private final FormResponseRepository repository;
     private final FormSectionRepository formSectionRepository;
     private final FormRepository formRepository;
+    private final UserRepository userRepository;
+    private final UserFormRoleRepository userFormRoleRepository;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
@@ -37,21 +35,27 @@ public class ResponseService {
 
     public ResponseService(FormResponseRepository repository,
                            FormSectionRepository formSectionRepository,
-                           FormRepository formRepository) {
+                           FormRepository formRepository,
+                           UserRepository userRepository,
+                           UserFormRoleRepository userFormRoleRepository
+                         ) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
         this.formRepository = formRepository;
+        this.userRepository=userRepository;
+        this.userFormRoleRepository=userFormRoleRepository;
+
     }
 
     // updated to accept files alongside response data
     public FormResponseDTO saveResponse(FormResponseDTO dto,
-                                        List<MultipartFile> files) {
+                                        List<MultipartFile> files, String username) {
 
 
         Map<String, String> uploadedFileMap = new HashMap<>();
 
         //validate form limits
-        validateFormLimits(dto.getFormId());
+        validateFormLimits(dto.getFormId(), username);
 
         // validate
         validateResponse(dto.getFormId(), dto.getResponse(), files);
@@ -156,13 +160,22 @@ public class ResponseService {
         return uniqueFileName;
     }
 
-    private void validateFormLimits(UUID formId) {
+    private void validateFormLimits(UUID formId, String username) {
 
         Form form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found"));
 
         Map<String, Object> settings = form.getSettings();
         if (settings == null) return;
+
+        // isPrivate check — reject if form is private and user is not logged in
+        Object isPrivate = settings.get("isPrivate");
+        if (Boolean.TRUE.equals(isPrivate)) {
+            if (username == null) {
+                throw new RuntimeException(
+                        "This form is private. Please log in to submit a response");
+            }
+        }
 
         // checking deadline
         Object deadlineObj = settings.get("deadline");
@@ -503,13 +516,22 @@ public class ResponseService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
+    public Map<String, Long> getUniqueAssignees(UUID formId) {
+        long count = userFormRoleRepository.countByFormIdAndRole(formId, RoleType.RESPONDER);
+        return Map.of("count", count);
+    }
+
+    public Map<String, Long> getUniqueRespondents(UUID formId) {
+        long count = repository.countDistinctUserByForm_Id(formId);
+        return Map.of("count", count);
+    }
 
     private FormResponseDTO mapToDTO(FormResponse entity) {
         FormResponseDTO dto = new FormResponseDTO();
         dto.setResponseId(entity.getResponseId());
-        /*Form form = new Form();
-        form.setId(dto.getFormId());
-        entity.setForm(form);*/
+    /*Form form = new Form();
+    form.setId(dto.getFormId());
+    entity.setForm(form);*/
         dto.setFormId(entity.getForm().getId());
         dto.setResponse(entity.getResponse());
         dto.setSubmittedAt(entity.getSubmittedAt());
@@ -528,6 +550,7 @@ public class ResponseService {
         entity.setResponse(dto.getResponse());
         entity.setSubmittedAt(dto.getSubmittedAt());
         return entity;
+        // user is set separately after this function is called
     }
 
 

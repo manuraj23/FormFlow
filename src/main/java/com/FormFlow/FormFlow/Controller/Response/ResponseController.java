@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -41,8 +44,15 @@ public class ResponseController {
         try {
             ObjectMapper mapper = new ObjectMapper();
             FormResponseDTO responseDTO = mapper.readValue(responseJson, FormResponseDTO.class);
+            // extract currently logged in username from JWT token
+            // will be null if no token provided - (anonymous user)
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String username= null;
+            if( auth !=null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")){
+                username=auth.getName();
+            }
 
-            return service.saveResponse(responseDTO, files);
+            return service.saveResponse(responseDTO, files, username);
 
         } catch (Exception e) {
             throw new RuntimeException("Invalid JSON format", e);
@@ -59,5 +69,15 @@ public class ResponseController {
     @GetMapping("/email/{email}")
     public List<FormResponseDTO> getByEmail(@PathVariable String email) {
         return service.getByEmail(email);
+    }
+
+    @GetMapping("/assignees/{formId}")
+    public Map<String, Long> getUniqueAssignees(@PathVariable UUID formId) {
+        return service.getUniqueAssignees(formId);
+    }
+
+    @GetMapping("/respondents/{formId}")
+    public Map<String, Long> getUniqueRespondents(@PathVariable UUID formId) {
+        return service.getUniqueRespondents(formId);
     }
 }

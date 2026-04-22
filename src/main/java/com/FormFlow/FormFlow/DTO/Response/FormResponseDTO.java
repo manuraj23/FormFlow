@@ -11,6 +11,7 @@ public class FormResponseDTO {
 
     private UUID responseId;
     private UUID formId;
+    private String username;
     private Map<String, Object> response;
     private LocalDateTime submittedAt;
     private Double score;
