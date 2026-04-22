@@ -32,6 +32,13 @@
 
 - create form using chatbot -- http://localhost:8082/formflow/ai/generateForm  (post)
 
+### Template Controller
+#### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
+
+- get all templates: http://localhost:8082/formflow/user/templates (get)
+- get template by id: http://localhost:8082/formflow/user/templates/{templateId} (get) id is template id
+- use a template: http://localhost:8082/formflow/user/templates/{templateId}/use (post)
+
 ### Group APIs--
 #### (get Access Token and Resfresh Token from login API and use it in header for below APIs)
 - create group -- http://localhost:8082/formflow/group/createGroup  (post)

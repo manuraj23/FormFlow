@@ -35,7 +35,7 @@ public class UserService {
     @Autowired
     private UserFormRoleRepository userFormRoleRepository;
 
-    public void createForm(FormCreateDTO dto, String username) {
+    public UUID createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
         Form form = new Form();
@@ -104,6 +104,7 @@ public class UserService {
             formRepository.save(form);
         }
 
+        return form.getId();
     }
 
     @Transactional(readOnly = true)
