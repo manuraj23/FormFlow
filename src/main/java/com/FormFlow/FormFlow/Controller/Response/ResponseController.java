@@ -33,7 +33,9 @@ public class ResponseController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO) {
-        return service.saveResponse(responseDTO, null);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return service.saveResponse(responseDTO, null, username);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
