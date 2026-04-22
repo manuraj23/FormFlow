@@ -113,7 +113,7 @@ public class UserController {
             if (updated) {
                 return new ResponseEntity<>("Form Updated Successfully", HttpStatus.OK);
             } else {
-                return new ResponseEntity<>("Version control is remaining", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Can not edit form(Create new version to update)", HttpStatus.BAD_REQUEST);
             }
         } catch (Exception e) {
             return new ResponseEntity<>("Error Updating Form: " + e.getMessage(), HttpStatus.BAD_REQUEST);

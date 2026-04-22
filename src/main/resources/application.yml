@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: FormFlow
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:prod}
+
+  config:
+    import: optional:file:.env[.properties]
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          ssl:
+            trust: smtp.gmail.com
+          auth: true
+          starttls:
+            enable: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}
+  from-email: ${SPRING_MAIL_USERNAME}
+
+server:
+  port: ${PORT:8082}
+  servlet:
+    context-path: /formflow
+  forward-headers-strategy: framework
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+
+ai:
+  gemini:
+    api-key: ${GEMINI_API_KEY}
+    api-base: ${GEMINI_API_BASE:https://generativelanguage.googleapis.com/v1beta}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+
+file:
+  upload-dir: uploads
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG
