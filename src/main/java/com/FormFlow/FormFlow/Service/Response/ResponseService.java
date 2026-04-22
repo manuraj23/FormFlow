@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,24 +96,42 @@ public class ResponseService {
             }
         }
 
+        Map<String, Object> evaluation = null;
+        Double score = null;
+        Double totalScore = null;
+
+        // check if quiz
+        Form form = formRepository.findById(dto.getFormId()).orElseThrow();
+        Map<String, Object> settings = form.getSettings();
+
+        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
+                || Boolean.TRUE.equals(settings.get("isQuiz"));
+
+        if (isQuiz) {
+            evaluation = evaluateQuiz(dto.getFormId(), responseMap);
+            score = ((Number) evaluation.get("score")).doubleValue();
+//            totalScore = ((Number) evaluation.get("maxScore")).doubleValue();
+//            evaluation.put("TotalScore", totalScore);
+        }
 
         // Save response to DB
         FormResponse entity = mapToEntity(dto);
         entity.setSubmittedAt(LocalDateTime.now());
-        // if username present, fetch user and link to response
-        if (username != null) {
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                throw new RuntimeException("User not found");
-            }
-            entity.setUser(user);
-
-        }
+        entity.setScore(score);
+        entity.setEvaluation(evaluation);
 
         FormResponse saved = repository.save(entity);
+        boolean showScore = settings != null &&
+                Boolean.parseBoolean(String.valueOf(settings.get("showScore")));
 
-        return mapToDTO(saved);
+        FormResponseDTO responseDTO = mapToDTO(saved);
 
+        if (!showScore) {
+            responseDTO.setScore(null);
+            responseDTO.setEvaluation(null);
+        }
+
+        return responseDTO;
     }
 
     // saves file to local uploads/ folder and return a unique file name
@@ -544,10 +563,8 @@ public class ResponseService {
         dto.setFormId(entity.getForm().getId());
         dto.setResponse(entity.getResponse());
         dto.setSubmittedAt(entity.getSubmittedAt());
-        // return username
-        if (entity.getUser() != null) {
-            dto.setUsername(entity.getUser().getUsername());
-        }
+        dto.setScore(entity.getScore());
+        dto.setEvaluation(entity.getEvaluation());
         return dto;
     }
 
@@ -564,5 +581,93 @@ public class ResponseService {
         // user is set separately after this function is called
     }
 
-}
 
+    private Map<String, Object> evaluateQuiz(UUID formId, Map<String, Object> responseMap) {
+
+        Map<String, Object> evaluation = new HashMap<>();
+        double totalScore = 0;
+        double maxScore = 0;
+
+        List<FormSection> sections =
+                formSectionRepository.findByFormIdInWithFields(List.of(formId));
+
+        for (FormSection section : sections) {
+
+            for (FormFields field : section.getFields()) {
+
+                Map<String, Object> quizConfig = field.getQuizConfig();
+                if (quizConfig == null || quizConfig.isEmpty()) {
+                    continue;
+                }
+
+                if (!Boolean.TRUE.equals(quizConfig.get("isScored"))) {
+                    continue;
+                }
+
+                String fieldId = field.getId().toString();
+                String label = (String) field.getFieldConfig().get("label");
+
+                Object rawAnswer = responseMap.get(fieldId);
+
+                if (rawAnswer == null && label != null) {
+                    rawAnswer = responseMap.get(label);
+                }
+
+                if (rawAnswer == null) {
+                    continue;
+                }
+
+                List<String> userAnswers;
+
+                if (rawAnswer instanceof List) {
+                    userAnswers = ((List<?>) rawAnswer).stream()
+                            .map(String::valueOf)
+                            .map(String::trim)
+                            .toList();
+                } else {
+                    userAnswers = List.of(rawAnswer.toString().trim());
+                }
+
+                Object correctAnswer = quizConfig.get("correctAnswer");
+
+                double points = quizConfig.get("points") == null
+                        ? 0.0
+                        : ((Number) quizConfig.get("points")).doubleValue();
+
+                double negativeMarks = quizConfig.get("negativeMarks") == null
+                        ? 0.0
+                        : ((Number) quizConfig.get("negativeMarks")).doubleValue();
+
+                boolean isCorrect;
+
+                if (correctAnswer instanceof List) {
+
+                    Set<String> correctSet = ((List<?>) correctAnswer).stream()
+                            .map(String::valueOf)
+                            .map(String::trim)
+                            .collect(java.util.stream.Collectors.toSet());
+
+                    isCorrect = new HashSet<>(userAnswers).equals(correctSet);
+                }
+
+                else {
+                    String correct = String.valueOf(correctAnswer).trim();
+
+                    isCorrect = userAnswers.size() == 1 &&
+                            userAnswers.get(0).equalsIgnoreCase(correct);
+                }
+                maxScore += points;
+
+                if (isCorrect) {
+                    totalScore += points;
+                } else {
+                    totalScore -= negativeMarks;
+                }
+            }
+        }
+
+        evaluation.put("score", totalScore);
+        evaluation.put("maxScore", maxScore);
+        return evaluation;
+    }
+}

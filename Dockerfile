@@ -1,28 +1,14 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS builder
-WORKDIR /build
-
-# Cache dependencies first for faster incremental builds.
-COPY pom.xml ./
-RUN mvn -B -DskipTests dependency:go-offline
-
-COPY src ./src
-RUN mvn -B -DskipTests clean package
-
-FROM eclipse-temurin:21-jre-jammy AS runtime
+# Stage 1: Build
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
-RUN groupadd --system spring && useradd --system --gid spring spring
+# Stage 2: Run
+FROM eclipse-temurin:17-jdk
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 
-COPY --from=builder /build/target/*.jar /app/app.jar
+EXPOSE 8080
 
-ENV SPRING_PROFILES_ACTIVE=prod \
-	JAVA_OPTS="" \
-	SERVER_PORT=8082
-
-EXPOSE 8082
-
-USER spring
-
-# Reads credentials from .env when mounted at /app/.env
-# (application.properties already includes spring.config.import=optional:file:.env[.properties]).
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["java", "-Xmx512m", "-jar", "app.jar"]

@@ -1,0 +1,3 @@
+ALTER TABLE form_sections
+    ADD COLUMN IF NOT EXISTS positive_marks NUMERIC(5,2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS negative_marks NUMERIC(5,2) DEFAULT 0.00;

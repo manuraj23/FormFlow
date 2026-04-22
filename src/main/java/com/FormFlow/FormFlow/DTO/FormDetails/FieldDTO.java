@@ -13,6 +13,7 @@ public class FieldDTO {
     private int fieldOrder;
     private Map<String, Object> fieldStyle;
     private Map<String, Object> fieldConfig;
-    private Map<String, Object> fieldLogic;
 
+    private Map<String, Object> fieldLogic;
+    private Map<String, Object> quizConfig;
 }

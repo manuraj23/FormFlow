@@ -1,0 +1,5 @@
+ALTER TABLE form_responses
+    ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+
+ALTER TABLE form_responses
+    ADD COLUMN IF NOT EXISTS evaluation JSONB;
