@@ -92,6 +92,7 @@ public class ResponseService {
 
         Map<String, Object> evaluation = null;
         Double score = null;
+        Double totalScore = null;
 
         // check if quiz
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
@@ -102,7 +103,9 @@ public class ResponseService {
 
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
-            score = ((Number) evaluation.get("totalScore")).doubleValue();
+            score = ((Number) evaluation.get("score")).doubleValue();
+//            totalScore = ((Number) evaluation.get("maxScore")).doubleValue();
+//            evaluation.put("TotalScore", totalScore);
         }
 
         // Save response to DB
@@ -532,6 +535,7 @@ public class ResponseService {
 
         Map<String, Object> evaluation = new HashMap<>();
         double totalScore = 0;
+        double maxScore = 0;
 
         List<FormSection> sections =
                 formSectionRepository.findByFormIdInWithFields(List.of(formId));
@@ -601,6 +605,7 @@ public class ResponseService {
                     isCorrect = userAnswers.size() == 1 &&
                             userAnswers.get(0).equalsIgnoreCase(correct);
                 }
+                maxScore += points;
 
                 if (isCorrect) {
                     totalScore += points;
@@ -610,7 +615,8 @@ public class ResponseService {
             }
         }
 
-        evaluation.put("totalScore", totalScore);
+        evaluation.put("score", totalScore);
+        evaluation.put("maxScore", maxScore);
         return evaluation;
     }
 }
