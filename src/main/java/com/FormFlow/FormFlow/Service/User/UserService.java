@@ -88,9 +88,21 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-                        if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                      /*  if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
                             field.setId(UUID.fromString(fieldDTO.getId()));
+                        }*/
+                        // suraj's logic
+                        if (dto.getMainParentId() == null) {
+                            // NEW FORM → allow ID if needed (optional)
+                            if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                                field.setId(UUID.fromString(fieldDTO.getId()));
+                            }
+                        } else {
+                            // NEW VERSION → DO NOT set ID
+                            field.setId(null); // let DB generate new UUID
                         }
+                       // -----
+
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());
@@ -257,6 +269,10 @@ public class UserService {
             }
 
             FormSection section = new FormSection();
+            // preserve existing section ID if frontend sends it
+            if (sectionDTO.getId() != null && !sectionDTO.getId().isBlank()) {
+                section.setId(UUID.fromString(sectionDTO.getId()));
+            }
             section.setSectionTitle(sectionDTO.getSectionTitle());
             section.setSectionOrder(sectionDTO.getSectionOrder());
             section.setForm(form);
@@ -266,6 +282,10 @@ public class UserService {
             for (FieldDTO fieldDTO : sectionDTO.getFields()) {
 
                 FormFields field = new FormFields();
+                // preserve existing field ID if frontend sends it
+                if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                    field.setId(UUID.fromString(fieldDTO.getId()));
+                }
 
                 try {
                     field.setFieldType(FieldType.valueOf(fieldDTO.getFieldType().toUpperCase()));

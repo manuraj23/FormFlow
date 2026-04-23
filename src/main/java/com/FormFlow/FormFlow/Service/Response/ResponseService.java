@@ -104,8 +104,13 @@ public class ResponseService {
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
         Map<String, Object> settings = form.getSettings();
 
-        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
-                || Boolean.TRUE.equals(settings.get("isQuiz"));
+      /*  boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
+                || Boolean.TRUE.equals(settings.get("isQuiz"));*/
+
+        boolean isQuiz = settings != null && (
+                Boolean.TRUE.equals(settings.get("isQuizMode"))
+                        || Boolean.TRUE.equals(settings.get("isQuiz"))
+        );
 
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
@@ -422,11 +427,18 @@ public class ResponseService {
                           */
                         case "DROPDOWN":
                         case "RADIO":
-                            if (options != null && !options.isEmpty()) {
+                          /*  if (options != null && !options.isEmpty()) {
                                 if (!options.contains(valueStr)) {
                                     throw new RuntimeException(
                                             "Field '" + label + "' must be one of: " + options);
                                 }
+                            }*/
+                            List<String> trimmedOptions1 = options.stream()
+                                    .map(String::trim)
+                                    .collect(Collectors.toList());
+                            if (!trimmedOptions1.contains(valueStr.trim())) {
+                                throw new RuntimeException(
+                                        "Field '" + label + "' must be one of: " + options);
                             }
                             break;
 
@@ -444,8 +456,19 @@ public class ResponseService {
                                         throw new RuntimeException("Field '" + label + "' is required");
                                     }
                                 }
-                                for (String s : selected) {
+                             /*   for (String s : selected) {
                                     if (!options.contains(s.trim())) {
+                                        throw new RuntimeException(
+                                                "Field '" + label + "' contains invalid option: " + s.trim());
+                                    }
+                                }*/
+
+                                List<String> trimmedOptions = options.stream()
+                                        .map(String::trim)
+                                        .collect(Collectors.toList());
+
+                                for (String s : selected) {
+                                    if (!trimmedOptions.contains(s.trim())) {
                                         throw new RuntimeException(
                                                 "Field '" + label + "' contains invalid option: " + s.trim());
                                     }
