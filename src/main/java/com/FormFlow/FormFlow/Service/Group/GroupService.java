@@ -325,7 +325,7 @@ public class GroupService {
     }
 
     @Transactional
-    public int assignFormToGroup(UUID groupId, UUID formId, String currentUsername) {
+    public int assignFormToGroup(UUID groupId, UUID formId, String currentUsername,RoleType roleType) {
         Group group = getGroupOrThrow(groupId);
         User currentUser = userRepository.findByUsername(currentUsername);
         if (currentUser == null) {
@@ -369,7 +369,7 @@ public class GroupService {
             UserFormRole role = new UserFormRole();
             role.setUser(user);
             role.setForm(form);
-            role.setRole(RoleType.RESPONDER);
+            role.setRole(roleType != null ? roleType : RoleType.VIEWER);
             role.setViewed(false);
             role.setAssignedAt(LocalDateTime.now());
             role.setAssignedBy(currentUsername);
@@ -381,6 +381,44 @@ public class GroupService {
         }
 
         return toSave.size();
+    }
+
+    @Transactional
+    public int updateGroupRole(UUID groupId, UUID formId, String currentUsername, RoleType newRole) {
+
+        Group group = getGroupOrThrow(groupId);
+        User currentUser = userRepository.findByUsername(currentUsername);
+        if (currentUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        if (!isOwnerOrAdmin(group, currentUser)) {
+            throw new RuntimeException("Only Owner/Admin can update roles");
+        }
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+
+        if (form.isDeleted()) {
+            throw new RuntimeException("Form not found");
+        }
+        if (!isSameUser(form.getUser(), currentUser)) {
+            throw new RuntimeException("Only Form Owner can update roles");
+        }
+        Map<UUID, User> targetUsers = new HashMap<>();
+        addUsersById(targetUsers, group.getMembers());
+        addUsersById(targetUsers, group.getAdmins());
+        addUsersById(targetUsers, Set.of(group.getOwner()));
+        List<UserFormRole> roles = userFormRoleRepository.findByFormId(formId);
+        int updatedCount = 0;
+        for (UserFormRole ufr : roles) {
+            User user = ufr.getUser();
+            if (user == null) continue;
+            if (!targetUsers.containsKey(user.getUserId())) continue;
+            if (isSameUser(user, form.getUser())) continue;
+            ufr.setRole(newRole);
+            updatedCount++;
+        }
+        userFormRoleRepository.saveAll(roles);
+        return updatedCount;
     }
 
     private boolean isOwnerOrAdmin(Group group, User user) {

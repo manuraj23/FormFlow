@@ -4,6 +4,7 @@ import com.FormFlow.FormFlow.DTO.Group.GroupCreateDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupResponseDTO;
 import com.FormFlow.FormFlow.DTO.Group.GroupUser;
 import com.FormFlow.FormFlow.Service.Group.GroupService;
+import com.FormFlow.FormFlow.enums.RoleType;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -185,17 +186,48 @@ public class GroupController {
     }
     
     @Operation(summary = "assign a form to a group")
-    @PostMapping("/{groupId}/assignForm/{formId}")
-    public ResponseEntity<?> assignFormToGroup(@PathVariable UUID groupId, @PathVariable UUID formId) {
+    @PostMapping("/{groupId}/assignForm/{formId}/{role}")
+    public ResponseEntity<?> assignFormToGroup(@PathVariable UUID groupId, @PathVariable UUID formId, @PathVariable(required = false) String role) {
         try {
             String currentUsername = getAuthenticatedUsername();
-            int assignedUsers = groupService.assignFormToGroup(groupId, formId, currentUsername);
+            RoleType roleType;
+            try {
+                roleType = (role == null) ? RoleType.VIEWER : RoleType.valueOf(role.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid role type");
+            }
+            int assignedUsers = groupService.assignFormToGroup(groupId, formId, currentUsername, roleType);
             return ResponseEntity.ok(Map.of(
                     "message", "Form assigned to group successfully",
                     "assignedUsers", assignedUsers
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error assigning form: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Update role of all group members for a form")
+    @PatchMapping("/{groupId}/form/{formId}/role")
+    public ResponseEntity<?> updateGroupRole(@PathVariable UUID groupId, @PathVariable UUID formId, @RequestParam String role) {
+        try {
+            String currentUsername = getAuthenticatedUsername();
+
+            RoleType roleType;
+            try {
+                roleType = RoleType.valueOf(role.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid role type");
+            }
+
+            int updatedCount = groupService.updateGroupRole(groupId, formId, currentUsername, roleType);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Group role updated successfully",
+                    "updatedUsers", updatedCount
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error updating roles: " + e.getMessage());
         }
     }
 
