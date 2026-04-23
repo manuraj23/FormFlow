@@ -82,4 +82,11 @@ public class ResponseController {
     public Map<String, Long> getUniqueRespondents(@PathVariable UUID formId) {
         return service.getUniqueRespondents(formId);
     }
+
+    @GetMapping("/hasResponded/{formId}/{userId}")
+    public Map<String, Boolean> hasUserResponded(
+            @PathVariable UUID formId,
+            @PathVariable UUID userId) {
+        return service.hasUserResponded(formId, userId);
+    }
 }

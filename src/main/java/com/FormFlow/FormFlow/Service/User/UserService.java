@@ -214,7 +214,7 @@ public class UserService {
         if (!(isEditor || isOwner)) {
             throw new RuntimeException("Unauthorized to update this form");
         }
-        List<FormResponse> responses = formResponseRepository.findByFormId(formId);
+        List<FormResponse> responses = formResponseRepository.findByForm_Id(formId);
         if (responses != null && !responses.isEmpty()) {
             return false; // force versioning
         }

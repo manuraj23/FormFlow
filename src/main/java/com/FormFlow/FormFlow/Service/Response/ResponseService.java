@@ -120,6 +120,15 @@ public class ResponseService {
         entity.setScore(score);
         entity.setEvaluation(evaluation);
 
+        // if username present, fetch user and link to response
+        if (username != null) {
+            User user = userRepository.findByUsername(username);
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            }
+            entity.setUser(user);
+        }
+
         FormResponse saved = repository.save(entity);
         boolean showScore = settings != null &&
                 Boolean.parseBoolean(String.valueOf(settings.get("showScore")));
@@ -200,7 +209,7 @@ public class ResponseService {
         if (maxResponsesObj != null) {
             int maxResponses = ((Number) maxResponsesObj).intValue();
 
-            long currentCount = repository.countByFormId(formId);
+            long currentCount = repository.countByForm_Id(formId);
 
             if (currentCount >= maxResponses) {
                 throw new RuntimeException("Maximum response limit reached");
@@ -532,14 +541,19 @@ public class ResponseService {
     }
 
     public List<FormResponseDTO> getResponses(UUID formId) {
-        return repository.findByFormId(formId)
+        return repository.findByForm_Id(formId)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    public Map<String, Boolean> hasUserResponded(UUID formId, UUID userId) {
+        boolean hasResponded = repository.existsByForm_IdAndUser_UserId(formId, userId);
+        return Map.of("hasResponded", hasResponded);
+    }
+
     public List<FormResponseDTO> getByEmail(String email) {
-        return repository.findByEmail(email)
+        return repository.findByUser_Email(email)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -565,6 +579,10 @@ public class ResponseService {
         dto.setSubmittedAt(entity.getSubmittedAt());
         dto.setScore(entity.getScore());
         dto.setEvaluation(entity.getEvaluation());
+        // return username so frontend knows who submitted
+        if (entity.getUser() != null) {
+            dto.setUsername(entity.getUser().getUsername());
+        }
         return dto;
     }
 
