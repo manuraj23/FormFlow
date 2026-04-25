@@ -234,6 +234,7 @@ public class UserService {
         if (dto.getDescription() != null) form.setDescription(dto.getDescription());
 
         form.setPublished(dto.isPublished());
+        form.setEditable(!dto.isPublished());
 
         if (dto.getSettings() != null) {
             form.setSettings(dto.getSettings());
