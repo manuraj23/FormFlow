@@ -45,6 +45,7 @@ public class UserService {
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
+        form.setEditable(!dto.isPublished());
         form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
@@ -53,12 +54,9 @@ public class UserService {
             Integer maxVersion = formRepository
                     .findMaxVersionByParentId(dto.getMainParentId());
             form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
-            if(form.getVersionId() == 2){
-
-            }
             Form latest = formRepository
                     .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
-            if (latest != null) {
+            if (form.isPublished() && latest != null) {
                 latest.setPublished(false);
                 formRepository.save(latest);
             }
@@ -88,8 +86,17 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-                        if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
-                            field.setId(UUID.fromString(fieldDTO.getId()));
+//                        if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+//                            field.setId(UUID.fromString(fieldDTO.getId()));
+//                        }
+                        if (dto.getMainParentId() == null) {
+                            // NEW FORM → allow ID if needed (optional)
+                            if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                                field.setId(UUID.fromString(fieldDTO.getId()));
+                            }
+                        } else {
+                            // NEW VERSION → DO NOT set ID
+                            field.setId(null); // let DB generate new UUID
                         }
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());

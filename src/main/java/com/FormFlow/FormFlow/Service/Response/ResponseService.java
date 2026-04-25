@@ -104,9 +104,13 @@ public class ResponseService {
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
         Map<String, Object> settings = form.getSettings();
 
-        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
-                || Boolean.TRUE.equals(settings.get("isQuiz"));
+//        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
+//                || Boolean.TRUE.equals(settings.get("isQuiz"));
 
+        boolean isQuiz = settings != null && (
+                Boolean.TRUE.equals(settings.get("isQuizMode"))
+                        || Boolean.TRUE.equals(settings.get("isQuiz"))
+        );
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
             score = ((Number) evaluation.get("score")).doubleValue();
