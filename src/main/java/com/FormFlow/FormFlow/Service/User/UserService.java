@@ -225,6 +225,9 @@ public class UserService {
         if (responses != null && !responses.isEmpty()) {
             return false; // force versioning
         }
+        if(!form.isEditable()){
+            throw new RuntimeException("Can not edit form once published");
+        }
 
         if (dto.getTitle() != null) form.setTitle(dto.getTitle());
         if (dto.getTheme() != null) form.setTheme(dto.getTheme());
