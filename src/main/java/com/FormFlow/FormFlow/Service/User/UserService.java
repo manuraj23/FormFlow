@@ -322,6 +322,7 @@ public class UserService {
         dto.setCreatedBy(form.getUser().getUsername());
         dto.setMainParentId(form.getMainParentId());
         dto.setVersionId(form.getVersionId());
+        dto.setEditable(form.isEditable());
         if (form.getSections() != null) {
             dto.setSections(form.getSections().stream().map(section -> {
                 SectionDTO sectionDTO = new SectionDTO();
@@ -467,6 +468,7 @@ public class UserService {
             dto.setFormId(v.getId());
             dto.setPublished(v.isPublished());
             dto.setCreatedAt(v.getCreatedAt());
+            dto.setEditable(v.isEditable());
             return dto;
         }).collect(Collectors.toList());
     }

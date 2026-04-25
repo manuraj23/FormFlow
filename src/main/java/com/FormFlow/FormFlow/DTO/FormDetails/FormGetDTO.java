@@ -22,4 +22,5 @@ public class FormGetDTO {
     private List<SectionDTO> sections;
     private LocalDateTime createdAt;
     private int versionId;
+    private boolean editable;
 }
