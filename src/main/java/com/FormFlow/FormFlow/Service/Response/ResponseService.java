@@ -29,6 +29,7 @@ public class ResponseService {
     private final UserRepository userRepository;
     private final UserFormRoleRepository userFormRoleRepository;
     private final ConditionalLogicService conditionalLogicService;
+    private final FormTimerRepository formTimerRepository;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
@@ -39,7 +40,8 @@ public class ResponseService {
                            FormRepository formRepository,
                            UserRepository userRepository,
                            UserFormRoleRepository userFormRoleRepository,
-                           ConditionalLogicService conditionalLogicService
+                           ConditionalLogicService conditionalLogicService,
+                           FormTimerRepository formTimerRepository
                          ) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
@@ -47,6 +49,7 @@ public class ResponseService {
         this.userRepository=userRepository;
         this.userFormRoleRepository=userFormRoleRepository;
         this.conditionalLogicService=conditionalLogicService;
+        this.formTimerRepository = formTimerRepository;
     }
 
     // updated to accept files alongside response data
@@ -111,6 +114,9 @@ public class ResponseService {
                 Boolean.TRUE.equals(settings.get("isQuizMode"))
                         || Boolean.TRUE.equals(settings.get("isQuiz"))
         );
+        if(isQuiz){
+            validateQuizTimer(dto.getFormId(), username, dto.getSubmittedAt());
+        }
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
             score = ((Number) evaluation.get("score")).doubleValue();
@@ -673,5 +679,50 @@ public class ResponseService {
         evaluation.put("score", totalScore);
         evaluation.put("maxScore", maxScore);
         return evaluation;
+    }
+
+    public void startTimer(UUID formId, String username, Integer duration) {
+        User user = userRepository.findByUsername(username);
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() ->
+                        new RuntimeException("Form not found"));
+        FormTimer timer = new FormTimer();
+        timer.setUser(user);
+        timer.setForm(form);
+        timer.setDuration(duration);
+        timer.setStartTime(LocalDateTime.now());
+        formTimerRepository.save(timer);
+    }
+
+    private void validateQuizTimer(UUID formId, String username, LocalDateTime clientEndTime) {
+        User user = userRepository.findByUsername(username);
+        Optional<FormTimer> optionalTimer = formTimerRepository.findByForm_IdAndUser_UserId(formId, user.getUserId());
+        // if no timer record exists, skip timer validation
+        if(optionalTimer.isEmpty()){
+            return;
+        }
+        FormTimer timer = optionalTimer.get();
+
+        if(timer.getDuration() == null){
+            return; // no duration configured
+        }
+
+        LocalDateTime serverNow = LocalDateTime.now();
+
+        // frontend end time should be within +/-1 minute of server time
+        long timeDifference = Math.abs(java.time.Duration.between(clientEndTime, serverNow).toSeconds());
+
+        if(timeDifference > 60){
+            throw new RuntimeException(
+                    "Invalid submission time mismatch");
+        }
+
+        // elapsed quiz time
+        long minutesSpent = java.time.Duration.between(timer.getStartTime(), serverNow).toMinutes();
+
+        if(minutesSpent > timer.getDuration()){
+            throw new RuntimeException(
+                    "Quiz duration exceeded");
+        }
     }
 }
