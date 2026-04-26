@@ -235,7 +235,14 @@ public class UserService {
 
         form.setPublished(dto.isPublished());
         form.setEditable(!dto.isPublished());
+        if(dto.isPublished()){
+            UUID parentId = form.getMainParentId() != null
+                    ? form.getMainParentId()
+                    : form.getId();
 
+            formRepository.deactivateAllVersions(parentId); // makes all drafts/unpublished
+            form.setPublished(true);
+        }
         if (dto.getSettings() != null) {
             form.setSettings(dto.getSettings());
 
