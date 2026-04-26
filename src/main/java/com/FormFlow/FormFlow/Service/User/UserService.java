@@ -54,11 +54,9 @@ public class UserService {
             Integer maxVersion = formRepository
                     .findMaxVersionByParentId(dto.getMainParentId());
             form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
-            Form latest = formRepository
-                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
-            if (form.isPublished() && latest != null) {
-                latest.setPublished(false);
-                formRepository.save(latest);
+            if (form.isPublished()) {
+                UUID parentId = dto.getMainParentId();
+                formRepository.deactivateAllVersions(parentId);
             }
 
         }else{
