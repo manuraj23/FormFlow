@@ -233,15 +233,13 @@ public class UserService {
         if (dto.getTheme() != null) form.setTheme(dto.getTheme());
         if (dto.getDescription() != null) form.setDescription(dto.getDescription());
 
-        form.setPublished(dto.isPublished());
-        form.setEditable(!dto.isPublished());
-        if(dto.isPublished()){
-            UUID parentId = form.getMainParentId() != null
-                    ? form.getMainParentId()
-                    : form.getId();
-
-            formRepository.deactivateAllVersions(parentId); // makes all drafts/unpublished
+        if (dto.isPublished()) {
+            UUID parentId = form.getMainParentId() != null ? form.getMainParentId() : form.getId();
+            formRepository.deactivateOtherVersions(parentId, form.getId());
             form.setPublished(true);
+            form.setEditable(false);
+        } else {
+            form.setPublished(false);
         }
         if (dto.getSettings() != null) {
             form.setSettings(dto.getSettings());
