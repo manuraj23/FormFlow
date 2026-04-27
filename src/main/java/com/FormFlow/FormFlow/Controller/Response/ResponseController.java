@@ -83,13 +83,13 @@ public class ResponseController {
         return service.getUniqueRespondents(formId);
     }
     @PostMapping("/timerStart/{formId}")
-    public Map<String,String> startTimer(@PathVariable UUID formId, @RequestParam Integer duration) {
+    public Map<String,String> startTimer(@PathVariable UUID formId) {
 
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
         String username = authentication.getName();
-        service.startTimer(formId, username, duration);
+        service.startTimer(formId, username);
         return Map.of("message","Timer started successfully");
     }
 }

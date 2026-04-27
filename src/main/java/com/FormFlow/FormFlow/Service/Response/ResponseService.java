@@ -681,7 +681,7 @@ public class ResponseService {
         return evaluation;
     }
 
-    public void startTimer(UUID formId, String username, Integer duration) {
+    public void startTimer(UUID formId, String username) {
         User user = userRepository.findByUsername(username);
         Form form = formRepository.findById(formId)
                 .orElseThrow(() ->
@@ -689,6 +689,18 @@ public class ResponseService {
         FormTimer timer = new FormTimer();
         timer.setUser(user);
         timer.setForm(form);
+
+        //GET DURATION FROM FORMId
+        Map<String, Object> settings = form.getSettings();
+        if (settings == null || settings.get("duration") == null) {
+            throw new RuntimeException("Duration not configured in form settings");
+        }
+        Object durationObj = settings.get("duration");
+        if (!(durationObj instanceof Number number)) {
+            throw new RuntimeException("Invalid duration format in form settings");
+        }
+        int duration = number.intValue();
+        timer.setDuration(duration);
         timer.setDuration(duration);
         timer.setStartTime(LocalDateTime.now());
         formTimerRepository.save(timer);

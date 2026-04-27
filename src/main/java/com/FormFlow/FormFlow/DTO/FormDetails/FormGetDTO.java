@@ -23,4 +23,5 @@ public class FormGetDTO {
     private LocalDateTime createdAt;
     private int versionId;
     private boolean editable;
+    private double maxScore;
 }

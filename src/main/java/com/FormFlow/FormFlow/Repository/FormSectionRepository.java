@@ -14,9 +14,9 @@ public interface FormSectionRepository extends JpaRepository<FormSection, UUID> 
 
     @Query("""
         SELECT DISTINCT s FROM FormSection s
-        LEFT JOIN FETCH s.fields
+        JOIN FETCH s.fields f
         WHERE s.form.id IN :formIds
-    """)
+        """)
     List<FormSection> findByFormIdInWithFields(@Param("formIds") List<UUID> formIds);
 
 
