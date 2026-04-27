@@ -12,4 +12,9 @@ public interface FormTimerRepository extends JpaRepository<FormTimer, UUID> {
             UUID formId,
             UUID userId
     );
+    Optional<FormTimer>
+    findTopByForm_IdAndUser_UserIdOrderByStartTimeDesc(
+            UUID formId,
+            UUID userId
+    );
 }

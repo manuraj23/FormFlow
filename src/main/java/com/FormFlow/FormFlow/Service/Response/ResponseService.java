@@ -115,7 +115,7 @@ public class ResponseService {
                         || Boolean.TRUE.equals(settings.get("isQuiz"))
         );
         if(isQuiz){
-            validateQuizTimer(dto.getFormId(), username, dto.getSubmittedAt());
+            validateQuizTimer(dto.getFormId(), username);
         }
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
@@ -682,59 +682,58 @@ public class ResponseService {
     }
 
     public void startTimer(UUID formId, String username) {
+        if(username == null){
+            throw new RuntimeException("User not authenticated");
+        }
         User user = userRepository.findByUsername(username);
-        Form form = formRepository.findById(formId)
-                .orElseThrow(() ->
-                        new RuntimeException("Form not found"));
+        if(user == null){
+            throw new RuntimeException("User not found");
+        }
+        Form form = formRepository.findById(formId).orElseThrow(() -> new RuntimeException("Form not found"));
+        Optional<FormTimer> existing = formTimerRepository.findByForm_IdAndUser_UserId(formId, user.getUserId());
+
+        if (existing.isPresent()) {
+            return; // timer already exists, don't create another
+        }
         FormTimer timer = new FormTimer();
         timer.setUser(user);
         timer.setForm(form);
-
-        //GET DURATION FROM FORMId
-        Map<String, Object> settings = form.getSettings();
-        if (settings == null || settings.get("duration") == null) {
+        Map<String,Object> settings = form.getSettings();
+        if(settings == null || settings.get("duration")==null){
             throw new RuntimeException("Duration not configured in form settings");
         }
         Object durationObj = settings.get("duration");
-        if (!(durationObj instanceof Number number)) {
-            throw new RuntimeException("Invalid duration format in form settings");
+        if(!(durationObj instanceof Number number)){
+            throw new RuntimeException("Invalid duration format");
         }
         int duration = number.intValue();
-        timer.setDuration(duration);
         timer.setDuration(duration);
         timer.setStartTime(LocalDateTime.now());
         formTimerRepository.save(timer);
     }
 
-    private void validateQuizTimer(UUID formId, String username, LocalDateTime clientEndTime) {
+    private void validateQuizTimer(UUID formId, String username) {
+        if (username == null) {
+            return;
+        }
         User user = userRepository.findByUsername(username);
-        Optional<FormTimer> optionalTimer = formTimerRepository.findByForm_IdAndUser_UserId(formId, user.getUserId());
-        // if no timer record exists, skip timer validation
-        if(optionalTimer.isEmpty()){
+        if (user == null){
+            return;
+        }
+        Optional<FormTimer> optionalTimer = formTimerRepository.findTopByForm_IdAndUser_UserIdOrderByStartTimeDesc(
+                        formId, user.getUserId());
+        if (optionalTimer.isEmpty()) {
             return;
         }
         FormTimer timer = optionalTimer.get();
-
-        if(timer.getDuration() == null){
-            return; // no duration configured
+        if (timer.getDuration() == null || timer.getStartTime() == null){
+            return;
         }
-
         LocalDateTime serverNow = LocalDateTime.now();
-
-        // frontend end time should be within +/-1 minute of server time
-        long timeDifference = Math.abs(java.time.Duration.between(clientEndTime, serverNow).toSeconds());
-
-        if(timeDifference > 60){
-            throw new RuntimeException(
-                    "Invalid submission time mismatch");
-        }
-
-        // elapsed quiz time
         long minutesSpent = java.time.Duration.between(timer.getStartTime(), serverNow).toMinutes();
 
-        if(minutesSpent > timer.getDuration()){
-            throw new RuntimeException(
-                    "Quiz duration exceeded");
+        if (minutesSpent > timer.getDuration()) {
+            throw new RuntimeException("Quiz duration exceeded");
         }
     }
 }
