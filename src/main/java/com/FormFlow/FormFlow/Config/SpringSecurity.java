@@ -54,7 +54,8 @@ public class SpringSecurity {
                                 "/uploads/**",
                                 "/oauth2/**",
                                 "/health/**",
-                                "/error"
+                                "/error",
+                                "/api/responses/**"
                         )).permitAll()
 
                         .requestMatchers(allMatchers("/user/**", "/group/**","/api/**","/ai/**")).authenticated()

@@ -16,4 +16,8 @@ public class FormResponseDTO {
     private LocalDateTime submittedAt;
     private Double score;
     private Map<String, Object> evaluation;
+
+    private LocalDateTime editableUntil;
+    private LocalDateTime lastEditedAt;
+
 }

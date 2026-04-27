@@ -125,6 +125,16 @@ public class ResponseService {
         entity.setScore(score);
         entity.setEvaluation(evaluation);
 
+        if (settings != null) {
+            Object editWindowObj = settings.get("editWindowMinutes");
+            if (editWindowObj != null) {
+                int editWindowMinutes = ((Number) editWindowObj).intValue();
+                entity.setEditableUntil(
+                        entity.getSubmittedAt().plusMinutes(editWindowMinutes)
+                );
+            }
+        }
+
         // if username present, fetch user and link to response
         if (username != null) {
             User user = userRepository.findByUsername(username);
@@ -146,6 +156,91 @@ public class ResponseService {
         }
 
         return responseDTO;
+    }
+
+    public FormResponseDTO editResponse(UUID responseId,
+                                        FormResponseDTO dto,
+                                        List<MultipartFile> files,
+                                        String username) {
+
+        //  fetch existing response
+        FormResponse existing = repository.findById(responseId)
+                .orElseThrow(() -> new RuntimeException("Response not found"));
+
+        //  block edits on quiz forms
+        Form form = existing.getForm();
+        Map<String, Object> settings = form.getSettings();
+
+        boolean isQuiz = settings != null && (
+                Boolean.TRUE.equals(settings.get("isQuizMode"))
+                        || Boolean.TRUE.equals(settings.get("isQuiz"))
+        );
+
+        if (isQuiz) {
+            throw new RuntimeException(
+                    "Quiz responses cannot be edited after submission");
+        }
+
+        //anonymous responses cannot be edited
+        if (existing.getUser() == null) {
+            throw new RuntimeException(
+                    "This response was submitted anonymously and cannot be edited");
+        }
+
+        // only the user who submitted can edit
+        if (!existing.getUser().getUsername().equals(username)) {
+            throw new RuntimeException(
+                    "You are not authorized to edit this response");
+        }
+
+        // edit window check
+        if (existing.getEditableUntil() == null) {
+            throw new RuntimeException(
+                    "Editing is not allowed for this form");
+        }
+        if (LocalDateTime.now().isAfter(existing.getEditableUntil())) {
+            throw new RuntimeException(
+                    "Edit window has closed. Responses could be edited until "
+                            + existing.getEditableUntil());
+        }
+
+        // re-run full validation on the new data — same as submission
+        validateResponse(existing.getForm().getId(), dto.getResponse(), files);
+
+        //  handle file uploads
+        Map<String, String> uploadedFileMap = new HashMap<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    String savedFileName = saveFileToLocal(file);
+                    uploadedFileMap.put(file.getOriginalFilename(), savedFileName);
+                }
+            }
+        }
+
+        //  update response map with file URLs
+        Map<String, Object> responseMap = dto.getResponse();
+        for (Map.Entry<String, Object> entry : new HashMap<>(responseMap).entrySet()) {
+            String fieldId = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String fileName = (String) value;
+                if (uploadedFileMap.containsKey(fileName)) {
+                    String savedFileName = uploadedFileMap.get(fileName);
+                    String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/uploads/")
+                            .path(savedFileName)
+                            .toUriString();
+                    responseMap.put(fieldId, fileUrl);
+                }
+            }
+        }
+        //  overwrite response and track edit time
+        existing.setResponse(dto.getResponse());
+        existing.setLastEditedAt(LocalDateTime.now());
+
+        FormResponse saved = repository.save(existing);
+        return mapToDTO(saved);
     }
 
     // saves file to local uploads/ folder and return a unique file name
@@ -602,6 +697,8 @@ public class ResponseService {
         dto.setSubmittedAt(entity.getSubmittedAt());
         dto.setScore(entity.getScore());
         dto.setEvaluation(entity.getEvaluation());
+        dto.setEditableUntil(entity.getEditableUntil());
+        dto.setLastEditedAt(entity.getLastEditedAt());
         // return username so frontend knows who submitted
         if (entity.getUser() != null) {
             dto.setUsername(entity.getUser().getUsername());
@@ -711,4 +808,5 @@ public class ResponseService {
         evaluation.put("maxScore", maxScore);
         return evaluation;
     }
+
 }
