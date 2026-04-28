@@ -30,6 +30,7 @@ public class ResponseService {
     private final UserFormRoleRepository userFormRoleRepository;
     private final ConditionalLogicService conditionalLogicService;
     private final FormTimerRepository formTimerRepository;
+    private final FormTempTimerRepository formTempTimerRepository;
 
     // reads upload directory from application-dev.yml
     @Value("${file.upload-dir}")
@@ -41,8 +42,9 @@ public class ResponseService {
                            UserRepository userRepository,
                            UserFormRoleRepository userFormRoleRepository,
                            ConditionalLogicService conditionalLogicService,
-                           FormTimerRepository formTimerRepository
-                         ) {
+                           FormTimerRepository formTimerRepository,
+                           FormTempTimerRepository formTempTimerRepository
+    ) {
         this.repository = repository;
         this.formSectionRepository = formSectionRepository;
         this.formRepository = formRepository;
@@ -50,11 +52,12 @@ public class ResponseService {
         this.userFormRoleRepository=userFormRoleRepository;
         this.conditionalLogicService=conditionalLogicService;
         this.formTimerRepository = formTimerRepository;
+        this.formTempTimerRepository = formTempTimerRepository;
     }
 
     // updated to accept files alongside response data
     public FormResponseDTO saveResponse(FormResponseDTO dto,
-                                        List<MultipartFile> files, String username) {
+                                        List<MultipartFile> files, String username, UUID tempUserId) {
 
 
         Map<String, String> uploadedFileMap = new HashMap<>();
@@ -65,7 +68,7 @@ public class ResponseService {
         // validate
         validateResponse(dto.getFormId(), dto.getResponse(), files);
 
-       // save files and fill map
+        // save files and fill map
         if (files != null && !files.isEmpty()) {
             for (MultipartFile file : files) {
                 if (!file.isEmpty()) {
@@ -74,7 +77,7 @@ public class ResponseService {
                 }
             }
         }
-             // update response with urls
+        // update response with urls
         Map<String, Object> responseMap = dto.getResponse();
 
         for (Map.Entry<String, Object> entry : new HashMap<>(responseMap).entrySet()) {
@@ -123,7 +126,7 @@ public class ResponseService {
                         || Boolean.TRUE.equals(settings.get("isQuiz"))
         );
         if(isQuiz){
-            validateQuizTimer(dto.getFormId(), username);
+            validateQuizTimer(dto.getFormId(), username, tempUserId);
         }
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
@@ -331,7 +334,7 @@ public class ResponseService {
                 List<String> options = (List<String>) config.get("options");
 
                 // changed: looking up submitted value by field ID instead of label ***
-               // String fieldId = field.getId() != null ? field.getId().toString() : null;
+                // String fieldId = field.getId() != null ? field.getId().toString() : null;
                 if (fieldId == null) continue;
 
                 Object submittedValue = submittedResponse.get(fieldId);
@@ -696,10 +699,17 @@ public class ResponseService {
         return evaluation;
     }
 
-    public void startTimer(UUID formId, String username) {
-        if(username == null){
-            throw new RuntimeException("User not authenticated");
+    public void startTimer(UUID formId, String username, UUID tempUserId) {
+        if ((username == null  || username.isBlank()) && tempUserId == null) {
+            throw new RuntimeException("User identity missing");
         }
+        if(tempUserId != null){
+            startPublicTimer(formId, tempUserId);
+            return;
+        }
+//        if(username == null){
+//            throw new RuntimeException("User not authenticated");
+//        }
         User user = userRepository.findByUsername(username);
         if(user == null){
             throw new RuntimeException("User not found");
@@ -734,7 +744,62 @@ public class ResponseService {
         formTimerRepository.save(timer);
     }
 
-    private void validateQuizTimer(UUID formId, String username) {
+    public void startPublicTimer(UUID formId, UUID tempUserId) {
+        if(tempUserId == null){
+            throw new RuntimeException("Backend Error : plz connect with backend team");
+        }
+        Form form = formRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found"));
+        Map<String, Object> settings = form.getSettings();
+        if (settings == null || settings.get("duration") == null) {
+            throw new RuntimeException("Duration not configured in form settings");
+        }
+        Object durationObj = settings.get("duration");
+        if(!(durationObj instanceof Number number)){
+            throw new RuntimeException("Invalid duration format");
+        }
+        int duration = number.intValue();
+        Optional<FormTempTimer> existing = formTempTimerRepository.findByForm_IdAndTempUserId(formId, tempUserId);
+        FormTempTimer timer;
+        if (existing.isPresent()) {
+            // UPDATE EXISTING TIMER
+            timer = existing.get();
+            timer.setStartTime(LocalDateTime.now());
+            timer.setDuration(duration);
+        } else {
+            // CREATE NEW TIMER
+            timer = new FormTempTimer();
+            timer.setTempUserId(tempUserId);
+            timer.setForm(form);
+            timer.setStartTime(LocalDateTime.now());
+            timer.setDuration(duration);
+        }
+        formTempTimerRepository.save(timer);
+    }
+
+
+    private void validateQuizTimer(UUID formId, String username, UUID tempUserId) {
+        //public user
+        if (tempUserId != null) {
+            Optional<FormTempTimer> optionalTimer =
+                    formTempTimerRepository.findTopByForm_IdAndTempUserIdOrderByStartTimeDesc(formId, tempUserId);
+            if (optionalTimer.isEmpty()){
+                return;
+            }
+            FormTempTimer timer = optionalTimer.get();
+            if (timer.getDuration() == null || timer.getStartTime() == null){
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            long minutesSpent = java.time.Duration.between(timer.getStartTime(), now).toMinutes() - 1;
+            if (minutesSpent > timer.getDuration()) {
+                throw new RuntimeException("Quiz duration exceeded");
+            }
+            return;
+        }
+
+        // CASE 2: AUTH USER
+
         if (username == null) {
             return;
         }
@@ -743,7 +808,7 @@ public class ResponseService {
             return;
         }
         Optional<FormTimer> optionalTimer = formTimerRepository.findTopByForm_IdAndUser_UserIdOrderByStartTimeDesc(
-                        formId, user.getUserId());
+                formId, user.getUserId());
         if (optionalTimer.isEmpty()) {
             return;
         }
