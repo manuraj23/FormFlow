@@ -105,6 +105,14 @@ public class ResponseService {
 
         // check if quiz
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
+
+
+//        User user = null;
+//        if (username != null && !username.equals("anonymousUser")) {
+//            user = userRepository.findByUsername(username);
+//        }
+
+
         Map<String, Object> settings = form.getSettings();
 
 //        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
@@ -126,6 +134,13 @@ public class ResponseService {
 
         // Save response to DB
         FormResponse entity = mapToEntity(dto);
+        if (username != null) {
+            User user = userRepository.findByUsername(username);
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            }
+            entity.setUser(user);
+        }
         entity.setSubmittedAt(LocalDateTime.now());
         entity.setScore(score);
         entity.setEvaluation(evaluation);
@@ -690,25 +705,32 @@ public class ResponseService {
             throw new RuntimeException("User not found");
         }
         Form form = formRepository.findById(formId).orElseThrow(() -> new RuntimeException("Form not found"));
-        Optional<FormTimer> existing = formTimerRepository.findByForm_IdAndUser_UserId(formId, user.getUserId());
 
-        if (existing.isPresent()) {
-            return; // timer already exists, don't create another
-        }
-        FormTimer timer = new FormTimer();
-        timer.setUser(user);
-        timer.setForm(form);
-        Map<String,Object> settings = form.getSettings();
-        if(settings == null || settings.get("duration")==null){
+        Map<String, Object> settings = form.getSettings();
+        if (settings == null || settings.get("duration") == null) {
             throw new RuntimeException("Duration not configured in form settings");
         }
         Object durationObj = settings.get("duration");
         if(!(durationObj instanceof Number number)){
             throw new RuntimeException("Invalid duration format");
         }
+
         int duration = number.intValue();
-        timer.setDuration(duration);
-        timer.setStartTime(LocalDateTime.now());
+        Optional<FormTimer> existing = formTimerRepository.findByForm_IdAndUser_UserId(formId, user.getUserId());
+        FormTimer timer;
+        if (existing.isPresent()) {
+            // UPDATE EXISTING TIMER
+            timer = existing.get();
+            timer.setStartTime(LocalDateTime.now());
+            timer.setDuration(duration);
+        } else {
+            // CREATE NEW TIMER
+            timer = new FormTimer();
+            timer.setUser(user);
+            timer.setForm(form);
+            timer.setStartTime(LocalDateTime.now());
+            timer.setDuration(duration);
+        }
         formTimerRepository.save(timer);
     }
 
@@ -730,7 +752,7 @@ public class ResponseService {
             return;
         }
         LocalDateTime serverNow = LocalDateTime.now();
-        long minutesSpent = java.time.Duration.between(timer.getStartTime(), serverNow).toMinutes();
+        long minutesSpent = java.time.Duration.between(timer.getStartTime(), serverNow).toMinutes() - 1;
 
         if (minutesSpent > timer.getDuration()) {
             throw new RuntimeException("Quiz duration exceeded");
