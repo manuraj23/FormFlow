@@ -236,7 +236,7 @@ public class ResponseService {
             }
         }
         //  overwrite response and track edit time
-        existing.setResponse(dto.getResponse());
+        existing.setResponse(responseMap);
         existing.setLastEditedAt(LocalDateTime.now());
 
         FormResponse saved = repository.save(existing);
