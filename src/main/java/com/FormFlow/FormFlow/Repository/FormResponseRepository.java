@@ -31,6 +31,6 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, UUID
     long countDistinctRespondentsByFormId(UUID formId);
 
     // check if a specific user has already submitted a response for a form
-    boolean existsByForm_IdAndUser_UserId(UUID formId, UUID userId);
+    boolean existsByForm_IdAndUser_Username(UUID formId, String username);
 
 }

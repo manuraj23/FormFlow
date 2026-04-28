@@ -110,11 +110,19 @@ public class ResponseController {
         return service.getUniqueRespondents(formId);
     }
 
-    @GetMapping("/hasResponded/{formId}/{userId}")
-    public Map<String, Boolean> hasUserResponded(
-            @PathVariable UUID formId,
-            @PathVariable UUID userId) {
-        return service.hasUserResponded(formId, userId);
+    @GetMapping("/hasResponded/{formId}")
+    public Map<String, Boolean> hasUserResponded(@PathVariable UUID formId) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()
+                || auth.getPrincipal().equals("anonymousUser")) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        String username = auth.getName();
+
+        return service.hasUserResponded(formId, username);
     }
 
 }

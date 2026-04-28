@@ -241,14 +241,14 @@ public class ResponseService {
        /*
         FormResponse saved = repository.save(existing);
         return mapToDTO(saved);*/
-        System.out.println("lastEditedAt before save: " + existing.getLastEditedAt());
+      //  System.out.println("lastEditedAt before save: " + existing.getLastEditedAt());
         repository.saveAndFlush(existing);
 
 // re-fetch to get the actual persisted state
         FormResponse saved = repository.findById(existing.getResponseId())
                 .orElseThrow(() -> new RuntimeException("Response not found"));
 
-        System.out.println("lastEditedAt after fetch: " + saved.getLastEditedAt());
+    //    System.out.println("lastEditedAt after fetch: " + saved.getLastEditedAt());
 
         return mapToDTO(saved);
     }
@@ -694,8 +694,9 @@ public class ResponseService {
                 .collect(Collectors.toList());
     }
 
-    public Map<String, Boolean> hasUserResponded(UUID formId, UUID userId) {
-        boolean hasResponded = repository.existsByForm_IdAndUser_UserId(formId, userId);
+    public Map<String, Boolean> hasUserResponded(UUID formId, String username) {
+
+        boolean hasResponded = repository.existsByForm_IdAndUser_Username(formId, username);
         return Map.of("hasResponded", hasResponded);
     }
 

@@ -37,6 +37,8 @@ public class UserService {
     @Autowired
     private UserFormRoleRepository userFormRoleRepository;
 
+
+
     public UUID createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
@@ -179,7 +181,15 @@ public class UserService {
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return finalForms.stream()
-                .map(this::convertToDTO)
+                .map(form -> {
+                    FormGetDTO dto = convertToDTO(form);
+
+                    //  including total responses for this end point
+                    long responseCount = formResponseRepository.countByForm_Id(form.getId());
+                    dto.setTotalResponses(responseCount);
+
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
