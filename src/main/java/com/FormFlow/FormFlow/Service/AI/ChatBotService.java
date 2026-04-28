@@ -32,7 +32,7 @@ public class ChatBotService {
     @Value("${ai.gemini.api-base:https://generativelanguage.googleapis.com/v1beta}")
     private String geminiApiBase;
 
-    @Value("${ai.gemini.model:gemini-2.5-flash}")
+    @Value("${ai.gemini.model:gemini-3-flash-preview}")
     private String geminiModel;
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -47,17 +47,47 @@ public class ChatBotService {
     // ===================== MAIN API =====================
     public ResponseEntity<?> generateForm(Map<String, String> request) {
 
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body("Gemini API key is not configured");
+        try {
+            String userPrompt = request.get("prompt");
+            if (userPrompt == null || userPrompt.isBlank()) {
+                return ResponseEntity.badRequest().body("Prompt is required");
+            }
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication is required");
+            }
+
+            String username = authentication.getName();
+
+            UUID formId = generateFormId(userPrompt, username);
+
+            return ResponseEntity.ok(Map.of("formId", formId));
+
+        } catch (HttpStatusCodeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body("Gemini API failed: " + e.getStatusCode().value());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    public UUID generateFormFromDraft(Map<String, Object> draft, String username) {
+        String userPrompt;
+        try {
+            userPrompt = objectMapper.writeValueAsString(draft == null ? Map.of() : draft);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize draft form data: " + e.getMessage(), e);
         }
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+        return generateFormId("Create a final form from this conversation draft:\n" + userPrompt, username);
+    }
 
-        String userPrompt = request.get("prompt");
-        if (userPrompt == null || userPrompt.isBlank()) {
-            return ResponseEntity.badRequest().body("Prompt is required");
+    private UUID generateFormId(String userPrompt, String username) {
+
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IllegalStateException("Gemini API key is not configured");
         }
 
         String systemPrompt = """
@@ -87,7 +117,7 @@ Sections:
 
 Fields:
 - Each field must include:
-  - fieldType (must be one of: TEXT, EMAIL, TEXTAREA, NUMBER, PHONE, DATE, TIME, DROPDOWN, RADIO, CHECKBOX, MULTI_SELECT, FILE, RATING)
+  - fieldType (must be one of: TEXT, TEXTAREA, DROPDOWN, CHECKBOX, FILE, RADIO)
   - fieldOrder (number starting from 1 within each section)
   - fieldConfig (object)
   - fieldStyle (object)
@@ -136,7 +166,14 @@ Important Constraints:
                     new ParameterizedTypeReference<>() {}
             );
 
-            Map<String, Object> responseBody = response.getBody();
+            Map<String, Object> responseBody = Objects.requireNonNull(
+                    response.getBody(),
+                    "Gemini API returned an empty response"
+            );
+            if (responseBody.get("candidates") == null) {
+                throw new RuntimeException("Gemini API returned an empty response");
+            }
+
             List<?> candidates = (List<?>) responseBody.get("candidates");
 
             Map<?, ?> first = (Map<?, ?>) candidates.get(0);
@@ -148,16 +185,12 @@ Important Constraints:
 
             FormGetDTO dto = convertToDTO(result);
 
-            UUID formId = saveForm(dto, username);
-
-            return ResponseEntity.ok(Map.of("formId", formId));
+            return saveForm(dto, username);
 
         } catch (HttpStatusCodeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body("Gemini API failed: " + e.getStatusCode().value());
+            throw e;
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
+            throw new RuntimeException("Error: " + e.getMessage(), e);
         }
     }
 
@@ -291,7 +324,7 @@ Important Constraints:
         String cleaned = rawJson.trim();
 
         if (cleaned.startsWith("```")) {
-            cleaned = cleaned.replaceAll("```json", "").replaceAll("```", "");
+            cleaned = cleaned.replace("```json", "").replace("```", "");
         }
 
         int start = cleaned.indexOf("{");
@@ -306,5 +339,60 @@ Important Constraints:
 
     private Map<String, Object> toMap(JsonNode node) {
         return objectMapper.convertValue(node, new TypeReference<>() {});
+    }
+
+
+    public String callGeminiRaw(String prompt) {
+
+        int maxRetries = 3;
+        int delay = 800;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+
+                Map<String, Object> part = Map.of("text", prompt);
+                Map<String, Object> content = Map.of("parts", List.of(part));
+                Map<String, Object> body = Map.of("contents", List.of(content));
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                String url = String.format("%s/models/%s:generateContent?key=%s",
+                        geminiApiBase, geminiModel, geminiApiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+                ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+                Map<String, Object> responseBody = Objects.requireNonNull(response.getBody());
+
+                List<?> candidates = (List<?>) responseBody.get("candidates");
+
+                Map<?, ?> first = (Map<?, ?>) candidates.get(0);
+                Map<?, ?> contentMap = (Map<?, ?>) first.get("content");
+                List<?> parts = (List<?>) contentMap.get("parts");
+                Map<?, ?> textPart = (Map<?, ?>) parts.get(0);
+
+                return (String) textPart.get("text");
+
+            } catch (HttpStatusCodeException e) {
+
+                if (e.getStatusCode().value() == 503 && attempt < maxRetries - 1) {
+                    try {
+                        Thread.sleep(delay);
+                        delay *= 2;
+                    } catch (InterruptedException ignored) {}
+                } else {
+                    throw e;
+                }
+            }
+        }
+
+        throw new RuntimeException("Gemini API failed after retries");
     }
 }
