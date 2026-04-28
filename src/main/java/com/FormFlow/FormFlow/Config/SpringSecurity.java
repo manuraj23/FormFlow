@@ -54,6 +54,7 @@ public class SpringSecurity {
                                 "/uploads/**",
                                 "/oauth2/**",
                                 "/health/**",
+                                "/template-images/**",
                                 "/error",
                                 "/api/responses/**"
                         )).permitAll()

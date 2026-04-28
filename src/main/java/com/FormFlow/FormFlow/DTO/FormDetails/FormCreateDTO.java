@@ -1,6 +1,5 @@
 package com.FormFlow.FormFlow.DTO.FormDetails;
 
-import com.FormFlow.FormFlow.DTO.FormDetails.SectionDTO;
 import lombok.Data;
 
 import java.util.List;
@@ -14,6 +13,7 @@ public class FormCreateDTO {
     private String theme;
     private String title;
     private String description;
+    private String imageUrl;
     private boolean published;
     private UUID userId;
     private int versionId;
