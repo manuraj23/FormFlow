@@ -30,7 +30,22 @@ public class TemplateService {
 	@Transactional
 	public void seedDefaultTemplates() {
 		for (TemplateSeed seed : defaultTemplates()) {
-			if (formTemplateRepository.findByTemplateName(seed.templateName()).isPresent()) {
+			FormTemplate existing = formTemplateRepository.findByTemplateName(seed.templateName()).orElse(null);
+			if (existing != null) {
+				boolean changed = false;
+				if (existing.getImageUrl() == null || existing.getImageUrl().isBlank()) {
+					existing.setImageUrl(seed.imageUrl());
+					changed = true;
+				}
+				// Keep existing default templates aligned with current seed field model
+				// so type normalization fixes are applied on startup.
+				if (!seed.sections().equals(existing.getSections())) {
+					existing.setSections(seed.sections());
+					changed = true;
+				}
+				if (changed) {
+					formTemplateRepository.save(existing);
+				}
 				continue;
 			}
 
@@ -39,6 +54,7 @@ public class TemplateService {
 			template.setTitle(seed.title());
 			template.setDescription(seed.description());
 			template.setTheme("default");
+			template.setImageUrl(seed.imageUrl());
 			template.setSettings(Map.of("allowMultipleSubmissions", false));
 			template.setSections(seed.sections());
 			template.setActive(true);
@@ -54,6 +70,7 @@ public class TemplateService {
 			dto.setTemplateName(template.getTemplateName());
 			dto.setTitle(template.getTitle());
 			dto.setDescription(template.getDescription());
+			dto.setImageUrl(template.getImageUrl());
 			return dto;
 		}).toList();
 	}
@@ -67,6 +84,7 @@ public class TemplateService {
 		FormCreateDTO dto = new FormCreateDTO();
 		dto.setTitle(template.getTitle());
 		dto.setDescription(template.getDescription());
+		dto.setImageUrl(template.getImageUrl());
 		dto.setTheme(template.getTheme());
 		dto.setPublished(false);
 		dto.setSettings(template.getSettings());
@@ -81,11 +99,11 @@ public class TemplateService {
 		return userService.createForm(templateDraft, username);
 	}
 
-	private record TemplateSeed(String templateName, String title, String description, List<Map<String, Object>> sections) {}
+	private record TemplateSeed(String templateName, String title, String description, String imageUrl, List<Map<String, Object>> sections) {}
 
 	private List<TemplateSeed> defaultTemplates() {
 		return List.of(
-				seed("Employee Onboarding Form", "Employee Onboarding Form", "Collect key details for new employee onboarding.", List.of(
+				seed("Employee Onboarding Form", "Employee Onboarding Form", "Collect key details for new employee onboarding.", templateImage("Employee onboarding.png"), List.of(
 						section("Personal Details", 1, List.of(
 								field("TEXT", 1, "Full Name", true, "Enter employee full name", null),
 								field("EMAIL", 2, "Work Email", true, "name@company.com", null),
@@ -102,7 +120,7 @@ public class TemplateService {
 								field("CHECKBOX", 3, "I confirm submitted details are correct", true, null, List.of("Confirmed"))
 						))
 				)),
-				seed("Student Registration Form", "Student Registration Form", "UG programme registration form with personal, parent, education and stream preference sections.", List.of(
+				seed("Student Registration Form", "Student Registration Form", "UG programme registration form with personal, parent, education and stream preference sections.", templateImage("Student Registration Form.png"), List.of(
 						section("Personal Details", 1, List.of(
 								field("TEXT", 1, "Student Full Name", true, "Enter full name", null),
 								field("DATE", 2, "Date of Birth", true, null, null),
@@ -126,7 +144,7 @@ public class TemplateService {
 								field("TEXTAREA", 3, "Why this stream?", false, "Share your preference", null)
 						))
 				)),
-				seed("Job Application Form", "Job Application Form", "Capture candidate details, experience and role fit.", List.of(
+				seed("Job Application Form", "Job Application Form", "Capture candidate details, experience and role fit.", templateImage("Job Application Form.png"), List.of(
 						section("Candidate Profile", 1, List.of(
 								field("TEXT", 1, "Full Name", true, "Enter full name", null),
 								field("EMAIL", 2, "Email", true, "name@email.com", null),
@@ -143,7 +161,7 @@ public class TemplateService {
 								field("DROPDOWN", 3, "Applied Position", true, null, List.of("Software Engineer", "QA Engineer", "Product Analyst", "Designer"))
 						))
 				)),
-				seed("Event Registration Form", "Event Registration Form", "Register attendees and collect participation preferences.", List.of(
+				seed("Event Registration Form", "Event Registration Form", "Register attendees and collect participation preferences.", templateImage("Event Registration Form.png"), List.of(
 						section("Attendee Information", 1, List.of(
 								field("TEXT", 1, "Full Name", true, "Enter full name", null),
 								field("EMAIL", 2, "Email", true, "name@email.com", null),
@@ -155,7 +173,7 @@ public class TemplateService {
 								field("TEXTAREA", 3, "Special Requirements", false, "Dietary/accessibility needs", null)
 						))
 				)),
-				seed("Contact Us Form", "Contact Us Form", "Collect incoming inquiries from users or customers.", List.of(
+				seed("Contact Us Form", "Contact Us Form", "Collect incoming inquiries from users or customers.", templateImage("Contact Us Form.png"), List.of(
 						section("Contact Details", 1, List.of(
 								field("TEXT", 1, "Name", true, "Enter your name", null),
 								field("EMAIL", 2, "Email", true, "name@email.com", null),
@@ -163,14 +181,14 @@ public class TemplateService {
 								field("TEXTAREA", 4, "Message", true, "Type your message", null)
 						))
 				)),
-				seed("Feedback Form", "Feedback Form", "Gather user feedback on product, service or event quality.", List.of(
+				seed("Feedback Form", "Feedback Form", "Gather user feedback on product, service or event quality.", templateImage("Feedback Form.png"), List.of(
 						section("Feedback", 1, List.of(
 								field("RATING", 1, "Overall Rating", true, null, null),
 								field("TEXTAREA", 2, "What did you like?", false, "Share positives", null),
 								field("TEXTAREA", 3, "What can be improved?", false, "Share improvements", null)
 						))
 				)),
-				seed("Customer Survey Form", "Customer Survey Form", "Run customer surveys and segment responses.", List.of(
+				seed("Customer Survey Form", "Customer Survey Form", "Run customer surveys and segment responses.", templateImage("Customer Survey Form.png"), List.of(
 						section("Customer Profile", 1, List.of(
 								field("DROPDOWN", 1, "Customer Type", true, null, List.of("Individual", "Business")),
 								field("TEXT", 2, "Industry", false, "Enter industry", null)
@@ -181,7 +199,7 @@ public class TemplateService {
 								field("TEXTAREA", 3, "Additional Comments", false, "Write your comments", null)
 						))
 				)),
-				seed("Leave Application Form", "Leave Application Form", "Submit and track employee leave requests.", List.of(
+				seed("Leave Application Form", "Leave Application Form", "Submit and track employee leave requests.", templateImage("Leave Application Form.png"), List.of(
 						section("Leave Details", 1, List.of(
 								field("TEXT", 1, "Employee Name", true, "Enter name", null),
 								field("DROPDOWN", 2, "Leave Type", true, null, List.of("Sick Leave", "Casual Leave", "Paid Leave", "Maternity/Paternity")),
@@ -193,7 +211,7 @@ public class TemplateService {
 								field("CHECKBOX", 2, "Manager Informed", true, null, List.of("Yes"))
 						))
 				)),
-				seed("Expense Reimbursement Form", "Expense Reimbursement Form", "Claim business expenses with category and proof.", List.of(
+				seed("Expense Reimbursement Form", "Expense Reimbursement Form", "Claim business expenses with category and proof.", templateImage("Expense Reimbursement Form.png"), List.of(
 						section("Claimant Details", 1, List.of(
 								field("TEXT", 1, "Employee Name", true, "Enter name", null),
 								field("TEXT", 2, "Department", true, "Enter department", null)
@@ -208,7 +226,7 @@ public class TemplateService {
 								field("FILE", 1, "Upload Receipt", true, null, null)
 						))
 				)),
-				seed("Vendor Registration Form", "Vendor Registration Form", "Register vendors and collect company/compliance details.", List.of(
+				seed("Vendor Registration Form", "Vendor Registration Form", "Register vendors and collect company/compliance details.", templateImage("Vendor Registration Form.png"), List.of(
 						section("Company Details", 1, List.of(
 								field("TEXT", 1, "Company Name", true, "Enter company name", null),
 								field("TEXT", 2, "Contact Person", true, "Enter contact name", null),
@@ -224,7 +242,7 @@ public class TemplateService {
 								field("FILE", 2, "Upload Compliance Documents", true, null, null)
 						))
 				)),
-				seed("Internship Application Form", "Internship Application Form", "Collect internship applications and skills information.", List.of(
+				seed("Internship Application Form", "Internship Application Form", "Collect internship applications and skills information.", templateImage("Internship Application Form.png"), List.of(
 						section("Applicant Details", 1, List.of(
 								field("TEXT", 1, "Full Name", true, "Enter full name", null),
 								field("EMAIL", 2, "Email", true, "name@email.com", null),
@@ -241,7 +259,7 @@ public class TemplateService {
 								field("TEXTAREA", 3, "Statement of Purpose", false, "Why do you want this internship?", null)
 						))
 				)),
-				seed("Course Enrollment Form", "Course Enrollment Form", "Enroll students into available courses.", List.of(
+				seed("Course Enrollment Form", "Course Enrollment Form", "Enroll students into available courses.", templateImage("Course Enrollment Form.png"), List.of(
 						section("Student Information", 1, List.of(
 								field("TEXT", 1, "Student Name", true, "Enter name", null),
 								field("EMAIL", 2, "Email", true, "student@email.com", null),
@@ -253,7 +271,7 @@ public class TemplateService {
 								field("CHECKBOX", 3, "Preferred Mode", false, null, List.of("Online", "Offline"))
 						))
 				)),
-				seed("Bug Report Form", "Bug Report Form", "Capture reproducible bug reports from users or testers.", List.of(
+				seed("Bug Report Form", "Bug Report Form", "Capture reproducible bug reports from users or testers.", templateImage("Bug Report Form.png"), List.of(
 						section("Issue Summary", 1, List.of(
 								field("TEXT", 1, "Bug Title", true, "Short bug title", null),
 								field("DROPDOWN", 2, "Severity", true, null, List.of("Critical", "High", "Medium", "Low")),
@@ -268,7 +286,7 @@ public class TemplateService {
 								field("FILE", 1, "Upload Screenshot/Video", false, null, null)
 						))
 				)),
-				seed("Appointment Booking Form", "Appointment Booking Form", "Book appointments with date/time and purpose.", List.of(
+				seed("Appointment Booking Form", "Appointment Booking Form", "Book appointments with date/time and purpose.", templateImage("Appointment Booking Form.png"), List.of(
 						section("Requester Details", 1, List.of(
 								field("TEXT", 1, "Name", true, "Enter your name", null),
 								field("EMAIL", 2, "Email", true, "name@email.com", null),
@@ -283,8 +301,12 @@ public class TemplateService {
 		);
 	}
 
-	private TemplateSeed seed(String name, String title, String description, List<Map<String, Object>> sections) {
-		return new TemplateSeed(name, title, description, sections);
+	private TemplateSeed seed(String name, String title, String description, String imageUrl, List<Map<String, Object>> sections) {
+		return new TemplateSeed(name, title, description, imageUrl, sections);
+	}
+
+	private String templateImage(String fileName) {
+		return "/template-images/" + fileName;
 	}
 
 	private Map<String, Object> section(String sectionTitle, int sectionOrder, List<Map<String, Object>> fields) {
@@ -303,9 +325,23 @@ public class TemplateService {
 			String placeholder,
 			List<String> options
 	) {
+		// Normalize incoming field types to the allowed set for templates:
+		// Allowed: TEXT, TEXTAREA, DROPDOWN, CHECKBOX, FILE, RADIO
+		String normalizedType = normalizeFieldType(type);
+
 		Map<String, Object> config = new LinkedHashMap<>();
 		config.put("label", label);
 		config.put("required", required);
+		// Preserve original type for UI hints, but force EMAIL/PHONE/DATE/TIME
+		// to TEXT so these fields behave like plain text inputs.
+		String originalType = (type == null) ? "TEXT" : type.toUpperCase();
+		if ("EMAIL".equals(originalType)
+				|| "PHONE".equals(originalType)
+				|| "DATE".equals(originalType)
+				|| "TIME".equals(originalType)) {
+			originalType = "TEXT";
+		}
+		config.put("originalType", originalType);
 		if (placeholder != null && !placeholder.isBlank()) {
 			config.put("placeholder", placeholder);
 		}
@@ -314,10 +350,37 @@ public class TemplateService {
 		}
 
 		Map<String, Object> field = new LinkedHashMap<>();
-		field.put("fieldType", type);
+		field.put("fieldType", normalizedType);
 		field.put("fieldOrder", fieldOrder);
 		field.put("fieldConfig", config);
 		field.put("fieldStyle", Map.of());
 		return field;
+	}
+
+	private String normalizeFieldType(String type) {
+		if (type == null) return "TEXT";
+		switch (type.toUpperCase()) {
+			case "TEXT":
+			case "EMAIL":
+			case "PHONE":
+			case "DATE":
+			case "TIME":
+			case "NUMBER":
+				return "TEXT";
+			case "TEXTAREA":
+				return "TEXTAREA";
+			case "DROPDOWN":
+				return "DROPDOWN";
+			case "MULTI_SELECT":
+			case "CHECKBOX":
+				return "CHECKBOX";
+			case "FILE":
+				return "FILE";
+			case "RADIO":
+			case "RATING":
+				return "RADIO";
+			default:
+				return "TEXT";
+		}
 	}
 }

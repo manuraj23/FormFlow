@@ -10,5 +10,6 @@ public class TemplateSummaryDTO {
     private String templateName;
     private String title;
     private String description;
+    private String imageUrl;
 }
 

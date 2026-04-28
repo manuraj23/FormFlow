@@ -31,6 +31,7 @@ public class FormTemplate {
     private String title;
     private String description;
     private String theme;
+    private String imageUrl;
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
