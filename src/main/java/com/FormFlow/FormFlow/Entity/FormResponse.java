@@ -39,6 +39,7 @@ public class FormResponse {
     private LocalDateTime submittedAt;
 
     private Double score;
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> evaluation;
 

@@ -7,6 +7,7 @@ import com.FormFlow.FormFlow.Entity.Form;
 import com.FormFlow.FormFlow.Entity.FormFields;
 import com.FormFlow.FormFlow.Entity.FormSection;
 import com.FormFlow.FormFlow.Repository.FormRepository;
+import com.FormFlow.FormFlow.Repository.FormResponseRepository;
 import com.FormFlow.FormFlow.Repository.FormSectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,9 @@ public class PublicService {
     @Autowired
     public FormSectionRepository formSectionRepository;
 
+    @Autowired
+    public FormResponseRepository formResponseRepository;
+
     @Transactional(readOnly = true)
     public FormGetDTO getFormById(UUID id) {
 
@@ -36,7 +40,11 @@ public class PublicService {
         }
 
         formSectionRepository.findByFormIdInWithFields(List.of(form.getId()));
-        return convertToDTO(form);
+
+       // return convertToDTO(form);
+        FormGetDTO dto = convertToDTO(form);
+        dto.setTotalResponses(formResponseRepository.countByForm_Id(id));
+        return dto;
     }
 
     private FormGetDTO convertToDTO(Form form) {

@@ -82,7 +82,10 @@
 
 ### Response APIs--
 #### not authenticated -- anyone can access these APIs without authentication
-- post response -- http://localhost:8082/formflow/api/responses  (post)
+- post response -- http://localhost:8082/formflow/api/responses  (post, multipart/form-data)
 - get form response by formId -- http://localhost:8082/formflow/api/responsesget/{formId} (get)
 - get unique assignees count by formId -- http://localhost:8082/formflow/api/responses/assignees/{formId} (get)
 - get unique respondents count by formId -- http://localhost:8082/formflow/api/responses/respondents/{formId} (get)
+- edit response -- http://localhost:8082/formflow/api/responses/{responseId}/edit (put, multipart/form-data)
+- get responses by email -- http://localhost:8082/formflow/api/responses/email/{email} (get)
+- check if user has responded -- http://localhost:8082/formflow/api/responses/hasResponded/{formId}/{userId} (get)

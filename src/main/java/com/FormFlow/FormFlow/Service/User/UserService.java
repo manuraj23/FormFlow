@@ -37,6 +37,8 @@ public class UserService {
     @Autowired
     private UserFormRoleRepository userFormRoleRepository;
 
+
+
     public UUID createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
@@ -84,9 +86,7 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-//                        if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
-//                            field.setId(UUID.fromString(fieldDTO.getId()));
-//                        }
+
                         if (dto.getMainParentId() == null) {
                             // NEW FORM → allow ID if needed (optional)
                             if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
@@ -96,6 +96,8 @@ public class UserService {
                             // NEW VERSION → DO NOT set ID
                             field.setId(null); // let DB generate new UUID
                         }
+                       // -----
+
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());
@@ -172,7 +174,15 @@ public class UserService {
         formSectionRepository.findByFormIdInWithFields(formIds);
 
         return finalForms.stream()
-                .map(this::convertToDTO)
+                .map(form -> {
+                    FormGetDTO dto = convertToDTO(form);
+
+                    //  including total responses for this end point
+                    long responseCount = formResponseRepository.countByForm_Id(form.getId());
+                    dto.setTotalResponses(responseCount);
+
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -219,7 +229,7 @@ public class UserService {
         if (!(isEditor || isOwner)) {
             throw new RuntimeException("Unauthorized to update this form");
         }
-        List<FormResponse> responses = formResponseRepository.findByFormId(formId);
+        List<FormResponse> responses = formResponseRepository.findByForm_Id(formId);
         if (responses != null && !responses.isEmpty()) {
             return false; // force versioning
         }
@@ -271,6 +281,10 @@ public class UserService {
             }
 
             FormSection section = new FormSection();
+            // preserve existing section ID if frontend sends it
+            if (sectionDTO.getId() != null && !sectionDTO.getId().isBlank()) {
+                section.setId(UUID.fromString(sectionDTO.getId()));
+            }
             section.setSectionTitle(sectionDTO.getSectionTitle());
             section.setSectionOrder(sectionDTO.getSectionOrder());
             section.setForm(form);
@@ -280,6 +294,10 @@ public class UserService {
             for (FieldDTO fieldDTO : sectionDTO.getFields()) {
 
                 FormFields field = new FormFields();
+                // preserve existing field ID if frontend sends it
+                if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                    field.setId(UUID.fromString(fieldDTO.getId()));
+                }
 
                 try {
                     field.setFieldType(FieldType.valueOf(fieldDTO.getFieldType().toUpperCase()));
