@@ -310,11 +310,16 @@ public class ResponseService {
                                 && r.getUser().getUsername().equals(username));
 
                 if (!isAssignedResponder) {
-                    throw new RuntimeException(
-                            "This form is only accessible to assigned responders");
+                    throw new RuntimeException("This form is only accessible to assigned responders");
                 }
             }
             // if no assigned responders — any logged in user can submit
+            // a user can submit a private form only once
+            boolean alreadyResponded = repository.existsByForm_IdAndUser_Username(formId, username);
+
+            if (alreadyResponded) {
+                throw new RuntimeException("You have already submitted a response for this form");
+            }
         }
 
         // checking deadline
