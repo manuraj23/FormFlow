@@ -47,6 +47,7 @@ public class UserService {
         form.setTitle(dto.getTitle());
         form.setDescription(dto.getDescription());
         form.setPublished(dto.isPublished());
+        form.setEditable(!dto.isPublished());
         form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
@@ -55,14 +56,9 @@ public class UserService {
             Integer maxVersion = formRepository
                     .findMaxVersionByParentId(dto.getMainParentId());
             form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
-            if(form.getVersionId() == 2){
-
-            }
-            Form latest = formRepository
-                    .findTopByMainParentIdOrderByVersionIdDesc(dto.getMainParentId());
-            if (latest != null) {
-                latest.setPublished(false);
-                formRepository.save(latest);
+            if (form.isPublished()) {
+                UUID parentId = dto.getMainParentId();
+                formRepository.deactivateAllVersions(parentId);
             }
 
         }else{
@@ -90,10 +86,7 @@ public class UserService {
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
                         }
-                      /*  if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
-                            field.setId(UUID.fromString(fieldDTO.getId()));
-                        }*/
-                        // suraj's logic
+
                         if (dto.getMainParentId() == null) {
                             // NEW FORM → allow ID if needed (optional)
                             if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
@@ -240,13 +233,22 @@ public class UserService {
         if (responses != null && !responses.isEmpty()) {
             return false; // force versioning
         }
+        if(!form.isEditable()){
+            throw new RuntimeException("Can not edit form once published");
+        }
 
         if (dto.getTitle() != null) form.setTitle(dto.getTitle());
         if (dto.getTheme() != null) form.setTheme(dto.getTheme());
         if (dto.getDescription() != null) form.setDescription(dto.getDescription());
 
-        form.setPublished(dto.isPublished());
-
+        if (dto.isPublished()) {
+            UUID parentId = form.getMainParentId() != null ? form.getMainParentId() : form.getId();
+            formRepository.deactivateOtherVersions(parentId, form.getId());
+            form.setPublished(true);
+            form.setEditable(false);
+        } else {
+            form.setPublished(false);
+        }
         if (dto.getSettings() != null) {
             form.setSettings(dto.getSettings());
 
@@ -342,6 +344,11 @@ public class UserService {
         dto.setCreatedBy(form.getUser().getUsername());
         dto.setMainParentId(form.getMainParentId());
         dto.setVersionId(form.getVersionId());
+        dto.setEditable(form.isEditable());
+
+        double maxScore = calculateMaxScore(form.getId());
+        dto.setMaxScore(maxScore);
+
         if (form.getSections() != null) {
             dto.setSections(form.getSections().stream().map(section -> {
                 SectionDTO sectionDTO = new SectionDTO();
@@ -487,6 +494,7 @@ public class UserService {
             dto.setFormId(v.getId());
             dto.setPublished(v.isPublished());
             dto.setCreatedAt(v.getCreatedAt());
+            dto.setEditable(v.isEditable());
             return dto;
         }).collect(Collectors.toList());
     }
@@ -515,4 +523,52 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("Form not found"));
         UUID parentId = form.getMainParentId() != null ? form.getMainParentId() : form.getId();
         formRepository.softDeleteByMainParentId(parentId);
-    }}
+    }
+    private double calculateMaxScore(UUID formId) {
+        double maxScore = 0;
+
+        List<FormSection> sections =
+                formSectionRepository.findByFormIdInWithFields(List.of(formId));
+
+        for (FormSection section : sections) {
+
+            for (FormFields field : section.getFields()) {
+
+                Map<String, Object> quizConfig = field.getQuizConfig();
+
+                if (quizConfig == null || quizConfig.isEmpty()) {
+                    continue;
+                }
+
+                Object isScoredObj = quizConfig.get("isScored");
+
+                boolean isScored =
+                        isScoredObj instanceof Boolean b
+                                ? b
+                                : isScoredObj != null && Boolean.parseBoolean(isScoredObj.toString());
+
+                if (!isScored) {
+                    continue;
+                }
+
+                Object pointsObj = quizConfig.get("points");
+
+                double points = 0.0;
+
+                if (pointsObj instanceof Number n) {
+                    points = n.doubleValue();
+                } else if (pointsObj != null) {
+                    try {
+                        points = Double.parseDouble(pointsObj.toString());
+                    } catch (Exception ignored) {
+                        points = 0.0;
+                    }
+                }
+
+                maxScore += points;
+            }
+        }
+
+        return maxScore;
+    }
+}

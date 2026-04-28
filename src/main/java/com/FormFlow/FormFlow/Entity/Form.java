@@ -30,6 +30,8 @@ public class Form {
 
     private boolean published;
 
+    private boolean editable;
+
     private boolean isDeleted;
 
     private String theme;

@@ -11,4 +11,5 @@ public class VersionResponseDTO {
     private UUID FormId;
     private boolean isPublished;
     private LocalDateTime createdAt;
+    private boolean editable;
 }

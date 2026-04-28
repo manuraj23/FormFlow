@@ -32,16 +32,19 @@ public class ResponseController {
     } */
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO) {
+    public FormResponseDTO submit(@RequestBody FormResponseDTO responseDTO,
+                                  @RequestParam(required = false) UUID tempUserId)
+    {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        return service.saveResponse(responseDTO, null, username);
+        return service.saveResponse(responseDTO, null, username, tempUserId);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FormResponseDTO submitWithFiles(
             @RequestPart("response") String responseJson,
-            @RequestPart(value = "files", required = false) List<MultipartFile> files
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(required = false) UUID tempUserId
     ) {
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -54,7 +57,7 @@ public class ResponseController {
                 username=auth.getName();
             }
 
-            return service.saveResponse(responseDTO, files, username);
+            return service.saveResponse(responseDTO, files, username, tempUserId);
 
         } catch (Exception e) {
             throw new RuntimeException("Invalid JSON format", e);
@@ -108,6 +111,16 @@ public class ResponseController {
     @GetMapping("/respondents/{formId}")
     public Map<String, Long> getUniqueRespondents(@PathVariable UUID formId) {
         return service.getUniqueRespondents(formId);
+    }
+    @PostMapping("/timerStart/{formId}")
+    public Map<String,String> startTimer(@PathVariable UUID formId,  @RequestParam(required = false) UUID tempUserId) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String username = authentication.getName();
+        service.startTimer(formId, username, tempUserId);
+        return Map.of("message","Timer started successfully");
     }
 
     @GetMapping("/hasResponded/{formId}")
