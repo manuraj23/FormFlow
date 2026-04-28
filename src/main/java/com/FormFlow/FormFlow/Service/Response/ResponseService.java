@@ -238,8 +238,18 @@ public class ResponseService {
         //  overwrite response and track edit time
         existing.setResponse(responseMap);
         existing.setLastEditedAt(LocalDateTime.now());
-
+       /*
         FormResponse saved = repository.save(existing);
+        return mapToDTO(saved);*/
+        System.out.println("lastEditedAt before save: " + existing.getLastEditedAt());
+        repository.saveAndFlush(existing);
+
+// re-fetch to get the actual persisted state
+        FormResponse saved = repository.findById(existing.getResponseId())
+                .orElseThrow(() -> new RuntimeException("Response not found"));
+
+        System.out.println("lastEditedAt after fetch: " + saved.getLastEditedAt());
+
         return mapToDTO(saved);
     }
 
@@ -279,13 +289,32 @@ public class ResponseService {
         Map<String, Object> settings = form.getSettings();
         if (settings == null) return;
 
-        // isPrivate check — reject if form is private and user is not logged in
+        // isPrivate check — rejecting if form is private and user is not logged in
         Object isPrivate = settings.get("isPrivate");
         if (Boolean.TRUE.equals(isPrivate)) {
             if (username == null) {
                 throw new RuntimeException(
                         "This form is private. Please log in to submit a response");
             }
+
+            //  checking if this private form has any assigned responders
+            List<UserFormRole> assignedRoles = userFormRoleRepository.findByFormId(formId);
+
+            boolean hasAssignedResponders = assignedRoles.stream()
+                    .anyMatch(r -> r.getRole() == RoleType.RESPONDER);
+
+            if (hasAssignedResponders) {
+                // form has assigned responders — only they can submit
+                boolean isAssignedResponder = assignedRoles.stream()
+                        .anyMatch(r -> r.getRole() == RoleType.RESPONDER
+                                && r.getUser().getUsername().equals(username));
+
+                if (!isAssignedResponder) {
+                    throw new RuntimeException(
+                            "This form is only accessible to assigned responders");
+                }
+            }
+            // if no assigned responders — any logged in user can submit
         }
 
         // checking deadline
