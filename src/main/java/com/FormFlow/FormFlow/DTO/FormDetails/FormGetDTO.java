@@ -16,6 +16,7 @@ public class FormGetDTO {
     private String title;
     private String description;
     private boolean published;
+    private long totalResponses;
     private Map<String, Object> settings;
     private String createdBy;
     private UUID mainParentId;

@@ -61,6 +61,33 @@ public class ResponseController {
         }
     }
 
+    @PutMapping(value = "/{responseId}/edit",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FormResponseDTO editResponse(
+            @PathVariable UUID responseId,
+            @RequestPart("response") String responseJson,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()
+                || auth.getPrincipal().equals("anonymousUser")) {
+            throw new RuntimeException(
+                    "You must be logged in to edit a response");
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            FormResponseDTO dto = mapper.readValue(responseJson, FormResponseDTO.class);
+            String username = auth.getName();
+            return service.editResponse(responseId, dto, files, username);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid JSON format", e);
+        }
+    }
+
     @Operation(summary = "Get all responses for a specific form by its ID")
     @GetMapping("/{formId}")
     public List<FormResponseDTO> getResponses(@PathVariable UUID formId) {
@@ -82,4 +109,20 @@ public class ResponseController {
     public Map<String, Long> getUniqueRespondents(@PathVariable UUID formId) {
         return service.getUniqueRespondents(formId);
     }
+
+    @GetMapping("/hasResponded/{formId}")
+    public Map<String, Boolean> hasUserResponded(@PathVariable UUID formId) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()
+                || auth.getPrincipal().equals("anonymousUser")) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        String username = auth.getName();
+
+        return service.hasUserResponded(formId, username);
+    }
+
 }

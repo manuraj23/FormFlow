@@ -104,8 +104,13 @@ public class ResponseService {
         Form form = formRepository.findById(dto.getFormId()).orElseThrow();
         Map<String, Object> settings = form.getSettings();
 
-        boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
-                || Boolean.TRUE.equals(settings.get("isQuiz"));
+      /*  boolean isQuiz = Boolean.TRUE.equals(settings.get("isQuizMode"))
+                || Boolean.TRUE.equals(settings.get("isQuiz"));*/
+
+        boolean isQuiz = settings != null && (
+                Boolean.TRUE.equals(settings.get("isQuizMode"))
+                        || Boolean.TRUE.equals(settings.get("isQuiz"))
+        );
 
         if (isQuiz) {
             evaluation = evaluateQuiz(dto.getFormId(), responseMap);
@@ -120,6 +125,25 @@ public class ResponseService {
         entity.setScore(score);
         entity.setEvaluation(evaluation);
 
+        if (settings != null) {
+            Object editWindowObj = settings.get("editWindowMinutes");
+            if (editWindowObj != null) {
+                int editWindowMinutes = ((Number) editWindowObj).intValue();
+                entity.setEditableUntil(
+                        entity.getSubmittedAt().plusMinutes(editWindowMinutes)
+                );
+            }
+        }
+
+        // if username present, fetch user and link to response
+        if (username != null) {
+            User user = userRepository.findByUsername(username);
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            }
+            entity.setUser(user);
+        }
+
         FormResponse saved = repository.save(entity);
         boolean showScore = settings != null &&
                 Boolean.parseBoolean(String.valueOf(settings.get("showScore")));
@@ -132,6 +156,101 @@ public class ResponseService {
         }
 
         return responseDTO;
+    }
+
+    public FormResponseDTO editResponse(UUID responseId,
+                                        FormResponseDTO dto,
+                                        List<MultipartFile> files,
+                                        String username) {
+
+        //  fetch existing response
+        FormResponse existing = repository.findById(responseId)
+                .orElseThrow(() -> new RuntimeException("Response not found"));
+
+        //  block edits on quiz forms
+        Form form = existing.getForm();
+        Map<String, Object> settings = form.getSettings();
+
+        boolean isQuiz = settings != null && (
+                Boolean.TRUE.equals(settings.get("isQuizMode"))
+                        || Boolean.TRUE.equals(settings.get("isQuiz"))
+        );
+
+        if (isQuiz) {
+            throw new RuntimeException(
+                    "Quiz responses cannot be edited after submission");
+        }
+
+        //anonymous responses cannot be edited
+        if (existing.getUser() == null) {
+            throw new RuntimeException(
+                    "This response was submitted anonymously and cannot be edited");
+        }
+
+        // only the user who submitted can edit
+        if (!existing.getUser().getUsername().equals(username)) {
+            throw new RuntimeException(
+                    "You are not authorized to edit this response");
+        }
+
+        // edit window check
+        if (existing.getEditableUntil() == null) {
+            throw new RuntimeException(
+                    "Editing is not allowed for this form");
+        }
+        if (LocalDateTime.now().isAfter(existing.getEditableUntil())) {
+            throw new RuntimeException(
+                    "Edit window has closed. Responses could be edited until "
+                            + existing.getEditableUntil());
+        }
+
+        // re-run full validation on the new data — same as submission
+        validateResponse(existing.getForm().getId(), dto.getResponse(), files);
+
+        //  handle file uploads
+        Map<String, String> uploadedFileMap = new HashMap<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    String savedFileName = saveFileToLocal(file);
+                    uploadedFileMap.put(file.getOriginalFilename(), savedFileName);
+                }
+            }
+        }
+
+        //  update response map with file URLs
+        Map<String, Object> responseMap = dto.getResponse();
+        for (Map.Entry<String, Object> entry : new HashMap<>(responseMap).entrySet()) {
+            String fieldId = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String fileName = (String) value;
+                if (uploadedFileMap.containsKey(fileName)) {
+                    String savedFileName = uploadedFileMap.get(fileName);
+                    String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/uploads/")
+                            .path(savedFileName)
+                            .toUriString();
+                    responseMap.put(fieldId, fileUrl);
+                }
+            }
+        }
+        //  overwrite response and track edit time
+        existing.setResponse(responseMap);
+        existing.setLastEditedAt(LocalDateTime.now());
+       /*
+        FormResponse saved = repository.save(existing);
+        return mapToDTO(saved);*/
+      //  System.out.println("lastEditedAt before save: " + existing.getLastEditedAt());
+        repository.saveAndFlush(existing);
+
+// re-fetch to get the actual persisted state
+        FormResponse saved = repository.findById(existing.getResponseId())
+                .orElseThrow(() -> new RuntimeException("Response not found"));
+
+    //    System.out.println("lastEditedAt after fetch: " + saved.getLastEditedAt());
+
+        return mapToDTO(saved);
     }
 
     // saves file to local uploads/ folder and return a unique file name
@@ -170,12 +289,36 @@ public class ResponseService {
         Map<String, Object> settings = form.getSettings();
         if (settings == null) return;
 
-        // isPrivate check — reject if form is private and user is not logged in
+        // isPrivate check — rejecting if form is private and user is not logged in
         Object isPrivate = settings.get("isPrivate");
         if (Boolean.TRUE.equals(isPrivate)) {
             if (username == null) {
                 throw new RuntimeException(
                         "This form is private. Please log in to submit a response");
+            }
+
+            //  checking if this private form has any assigned responders
+            List<UserFormRole> assignedRoles = userFormRoleRepository.findByFormId(formId);
+
+            boolean hasAssignedResponders = assignedRoles.stream()
+                    .anyMatch(r -> r.getRole() == RoleType.RESPONDER);
+
+            if (hasAssignedResponders) {
+                // form has assigned responders — only they can submit
+                boolean isAssignedResponder = assignedRoles.stream()
+                        .anyMatch(r -> r.getRole() == RoleType.RESPONDER
+                                && r.getUser().getUsername().equals(username));
+
+                if (!isAssignedResponder) {
+                    throw new RuntimeException("This form is only accessible to assigned responders");
+                }
+            }
+            // if no assigned responders — any logged in user can submit
+            // a user can submit a private form only once
+            boolean alreadyResponded = repository.existsByForm_IdAndUser_Username(formId, username);
+
+            if (alreadyResponded) {
+                throw new RuntimeException("You have already submitted a response for this form");
             }
         }
 
@@ -200,7 +343,7 @@ public class ResponseService {
         if (maxResponsesObj != null) {
             int maxResponses = ((Number) maxResponsesObj).intValue();
 
-            long currentCount = repository.countByFormId(formId);
+            long currentCount = repository.countByForm_Id(formId);
 
             if (currentCount >= maxResponses) {
                 throw new RuntimeException("Maximum response limit reached");
@@ -413,11 +556,18 @@ public class ResponseService {
                           */
                         case "DROPDOWN":
                         case "RADIO":
-                            if (options != null && !options.isEmpty()) {
+                          /*  if (options != null && !options.isEmpty()) {
                                 if (!options.contains(valueStr)) {
                                     throw new RuntimeException(
                                             "Field '" + label + "' must be one of: " + options);
                                 }
+                            }*/
+                            List<String> trimmedOptions1 = options.stream()
+                                    .map(String::trim)
+                                    .collect(Collectors.toList());
+                            if (!trimmedOptions1.contains(valueStr.trim())) {
+                                throw new RuntimeException(
+                                        "Field '" + label + "' must be one of: " + options);
                             }
                             break;
 
@@ -435,8 +585,19 @@ public class ResponseService {
                                         throw new RuntimeException("Field '" + label + "' is required");
                                     }
                                 }
-                                for (String s : selected) {
+                             /*   for (String s : selected) {
                                     if (!options.contains(s.trim())) {
+                                        throw new RuntimeException(
+                                                "Field '" + label + "' contains invalid option: " + s.trim());
+                                    }
+                                }*/
+
+                                List<String> trimmedOptions = options.stream()
+                                        .map(String::trim)
+                                        .collect(Collectors.toList());
+
+                                for (String s : selected) {
+                                    if (!trimmedOptions.contains(s.trim())) {
                                         throw new RuntimeException(
                                                 "Field '" + label + "' contains invalid option: " + s.trim());
                                     }
@@ -532,14 +693,20 @@ public class ResponseService {
     }
 
     public List<FormResponseDTO> getResponses(UUID formId) {
-        return repository.findByFormId(formId)
+        return repository.findByForm_Id(formId)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    public Map<String, Boolean> hasUserResponded(UUID formId, String username) {
+
+        boolean hasResponded = repository.existsByForm_IdAndUser_Username(formId, username);
+        return Map.of("hasResponded", hasResponded);
+    }
+
     public List<FormResponseDTO> getByEmail(String email) {
-        return repository.findByEmail(email)
+        return repository.findByUser_Email(email)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -565,6 +732,12 @@ public class ResponseService {
         dto.setSubmittedAt(entity.getSubmittedAt());
         dto.setScore(entity.getScore());
         dto.setEvaluation(entity.getEvaluation());
+        dto.setEditableUntil(entity.getEditableUntil());
+        dto.setLastEditedAt(entity.getLastEditedAt());
+        // return username so frontend knows who submitted
+        if (entity.getUser() != null) {
+            dto.setUsername(entity.getUser().getUsername());
+        }
         return dto;
     }
 
@@ -670,4 +843,5 @@ public class ResponseService {
         evaluation.put("maxScore", maxScore);
         return evaluation;
     }
+
 }

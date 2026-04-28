@@ -39,6 +39,14 @@ public class FormResponse {
     private LocalDateTime submittedAt;
 
     private Double score;
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> evaluation;
+
+    // when the edit window closes — null means editing not allowed for this form
+    private LocalDateTime editableUntil;
+
+    // track when response was last edited — null means never edited
+    private LocalDateTime lastEditedAt;
+
 }
