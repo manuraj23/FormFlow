@@ -85,7 +85,12 @@ public class AgentService {
                 return errorResponse(session.getId(), "Authentication required to generate a form");
             }
 
-            UUID formId = chatBotService.generateFormFromDraft(collectedData, username);
+            UUID formId;
+            try {
+                formId = chatBotService.generateFormFromDraft(collectedData, username);
+            } catch (Exception e) {
+                return errorResponse(session.getId(), e.getMessage());
+            }
             collectedData.put("generatedFormId", formId.toString());
 
             session.setCollectedData(collectedData);
@@ -136,6 +141,7 @@ public class AgentService {
                     "title": "string",
                     "description": "string",
                     "theme": "string",
+                    "published": false,
                     "settings": {},
                     "sections": [
                       {
@@ -149,7 +155,9 @@ public class AgentService {
                               "label": "string",
                               "required": true
                             },
-                            "fieldStyle": {}
+                            "fieldStyle": {},
+                            "quizConfig": {},
+                            "fieldLogic": {}
                           }
                         ]
                       }
@@ -161,6 +169,7 @@ public class AgentService {
                 
                 - Ask only one follow-up question at a time.
                 - Carry forward all previously collected details into draft.
+                - Use only valid field types: TEXT, EMAIL, TEXTAREA, NUMBER, PHONE, DATE, TIME, DROPDOWN, RADIO, CHECKBOX, MULTI_SELECT, FILE, RATING.
                 - Use action generate_form only when the draft is complete enough to create the final form.
                 - If the user already provided enough detail, return generate_form immediately.
                 - Output JSON only; no markdown, no explanation.
