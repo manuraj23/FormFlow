@@ -451,8 +451,17 @@ public class UserService {
         List<UUID> formIds = forms.stream().map(Form::getId).toList();
         formSectionRepository.findByFormIdInWithFields(formIds);
 
-        return forms.stream()
+       /* return forms.stream()
                 .map(this::convertToDTO)
+                .toList();*/
+
+        return forms.stream()
+                .map(form -> {
+                    FormGetDTO dto = convertToDTO(form);
+                    long responseCount = formResponseRepository.countByForm_Id(form.getId());
+                    dto.setTotalResponses(responseCount);
+                    return dto;
+                })
                 .toList();
     }
 

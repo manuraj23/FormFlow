@@ -63,6 +63,18 @@ public class UserController {
         String username = authentication.getName();
         return userService.getFormsByStatus(username,status);
     }
+    @Operation(summary = "Get All Forms in Trash")
+    @GetMapping("/form/trash")
+    public ResponseEntity<List<FormGetDTO>> getTrashedForms() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        List<FormGetDTO> trashedForms = userService.getTrashedForms(username);
+        if (trashedForms != null && !trashedForms.isEmpty()) {
+            return new ResponseEntity<>(trashedForms, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     @Operation(summary = "Get a form by its ID")
     @GetMapping("/form/{id}")
@@ -81,18 +93,7 @@ public class UserController {
         return ResponseEntity.ok("Form Moved to Trash successfully");
     }
 
-    @Operation(summary = "Get All Forms in Trash")
-    @GetMapping("/form/trash")
-    public ResponseEntity<List<FormGetDTO>> getTrashedForms() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        List<FormGetDTO> trashedForms = userService.getTrashedForms(username);
-        if (trashedForms != null && !trashedForms.isEmpty()) {
-            return new ResponseEntity<>(trashedForms, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
+
 
     @Operation(summary = "Restore deleted form from Trash by form id")
     @PatchMapping("/form/restoreFromTrash/{id}")
