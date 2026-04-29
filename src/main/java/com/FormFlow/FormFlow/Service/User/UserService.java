@@ -51,21 +51,23 @@ public class UserService {
         form.setSettings(dto.getSettings());
         form.setDeleted(false);
         form.setUser(user);
-        if(dto.getMainParentId() != null){
+        // mapping for old field IDs → new field IDs (used in versioning fix)
+        Map<String, String> oldToNewIdMap = new HashMap<>();
+        if (dto.getMainParentId() != null) {
             form.setMainParentId(dto.getMainParentId());
-            Integer maxVersion = formRepository
-                    .findMaxVersionByParentId(dto.getMainParentId());
-            form.setVersionId((maxVersion==null) ? 1 : maxVersion+ 1);
+            Integer maxVersion = formRepository.findMaxVersionByParentId(dto.getMainParentId());
+            form.setVersionId((maxVersion == null) ? 1 : maxVersion + 1);
             if (form.isPublished()) {
                 UUID parentId = dto.getMainParentId();
                 formRepository.deactivateAllVersions(parentId);
             }
 
-        }else{
+        } else {
             form.setVersionId(1);
         }
         if (dto.getSections() != null) {
-            form.setSections(dto.getSections().stream().map(sectionDTO -> {
+            List<FormSection> sections = new ArrayList<>();
+            for (SectionDTO sectionDTO : dto.getSections()) {
 
                 FormSection section = new FormSection();
                 section.setSectionTitle(sectionDTO.getSectionTitle());
@@ -73,51 +75,69 @@ public class UserService {
                 section.setForm(form);
 
                 if (sectionDTO.getFields() != null) {
-                    section.setFields(sectionDTO.getFields().stream().map(fieldDTO -> {
-
+                    List<FormFields> fields = new ArrayList<>();
+                    for (FieldDTO fieldDTO : sectionDTO.getFields()) {
                         FormFields field = new FormFields();
-
+                        // field type
                         try {
-                            String type = fieldDTO.getFieldType();
-
                             field.setFieldType(
-                                    FieldType.valueOf(type.toUpperCase())
+                                    FieldType.valueOf(fieldDTO.getFieldType().toUpperCase())
                             );
                         } catch (Exception e) {
-                            throw new RuntimeException("Invalid field type: " + fieldDTO.getFieldType());
+                            throw new RuntimeException(
+                                    "Invalid field type: " + fieldDTO.getFieldType()
+                            );
                         }
 
                         if (dto.getMainParentId() == null) {
-                            // NEW FORM → allow ID if needed (optional)
                             if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
                                 field.setId(UUID.fromString(fieldDTO.getId()));
                             }
                         } else {
-                            // NEW VERSION → DO NOT set ID
-                            field.setId(null); // let DB generate new UUID
+                            UUID newId = UUID.randomUUID();
+                            field.setId(newId);
+                            if (fieldDTO.getId() != null && !fieldDTO.getId().isBlank()) {
+                                oldToNewIdMap.put(fieldDTO.getId(), newId.toString());
+                            }
                         }
-                       // -----
 
                         field.setFieldOrder(fieldDTO.getFieldOrder());
                         field.setFieldConfig(fieldDTO.getFieldConfig());
                         field.setFieldStyle(fieldDTO.getFieldStyle());
-
                         field.setQuizConfig(fieldDTO.getQuizConfig());
                         field.setFieldLogic(fieldDTO.getFieldLogic());
 
-
                         field.setSection(section);
-
-                        return field;
-                    }).toList());
+                        fields.add(field);
+                    }
+                    section.setFields(fields);
                 }
+                sections.add(section);
+            }
+            form.setSections(sections);
+        }
 
-                return section;
-            }).toList());
+        if (dto.getMainParentId() != null && !oldToNewIdMap.isEmpty()) {
+            form.getSections().forEach(section -> section.getFields().forEach(field -> {
+                Map<String, Object> logic = field.getFieldLogic();
+
+                if (logic != null && Boolean.TRUE.equals(logic.get("enabled")) && logic.get("sourceFieldId") != null){
+                            String oldSourceId = (String) logic.get("sourceFieldId");
+
+                            if (oldToNewIdMap.containsKey(oldSourceId)) {
+                                Map<String, Object> updatedLogic = new HashMap<>(logic);
+                                updatedLogic.put("sourceFieldId", oldToNewIdMap.get(oldSourceId));
+                                field.setFieldLogic(updatedLogic);
+                            }
+                        }
+                    })
+            );
         }
 
         formRepository.save(form);
-        if(form.getVersionId() == 1) {
+
+        // set mainParentId for first version
+        if (form.getVersionId() == 1){
             form.setMainParentId(form.getId());
             formRepository.save(form);
         }
