@@ -24,4 +24,6 @@ public interface UserFormRoleRepository extends JpaRepository<UserFormRole, UUID
 @Query("SELECT COUNT(DISTINCT r.user.userId) FROM UserFormRole r WHERE r.form.id = :formId AND r.role = :role")
 long countDistinctAssigneesByFormIdAndRole(UUID formId, RoleType role);
 
+    List<UserFormRole> findByFormIdAndRole(UUID formId, RoleType role);
+
 }

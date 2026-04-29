@@ -38,7 +38,7 @@ public class UserService {
     private UserFormRoleRepository userFormRoleRepository;
 
 
-    @Transactional
+
     public UUID createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
@@ -246,6 +246,7 @@ public class UserService {
             formRepository.deactivateOtherVersions(parentId, form.getId());
             form.setPublished(true);
             form.setEditable(false);
+            deleteEditor(formId);
         } else {
             form.setPublished(false);
         }
@@ -570,5 +571,13 @@ public class UserService {
         }
 
         return maxScore;
+    }
+
+    @Transactional
+    private void deleteEditor(UUID formId){
+        List<UserFormRole> editorRoles = userFormRoleRepository.findByFormIdAndRole(formId, RoleType.EDITOR);
+        if (!editorRoles.isEmpty()) {
+            userFormRoleRepository.deleteAll(editorRoles);
+        }
     }
 }
