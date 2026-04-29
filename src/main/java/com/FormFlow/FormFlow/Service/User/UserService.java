@@ -38,7 +38,7 @@ public class UserService {
     private UserFormRoleRepository userFormRoleRepository;
 
 
-
+    @Transactional
     public UUID createForm(FormCreateDTO dto, String username) {
 
         User user = userRepository.findByUsername(username);
