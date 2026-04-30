@@ -155,7 +155,7 @@ public class ResponseService {
             if (editWindowObj != null) {
                 int editWindowMinutes = ((Number) editWindowObj).intValue();
                 entity.setEditableUntil(
-                        entity.getSubmittedAt().plusMinutes(editWindowMinutes)
+                        Instant.now().plusSeconds(editWindowMinutes * 60L)
                 );
             }
         }
@@ -223,7 +223,7 @@ public class ResponseService {
             throw new RuntimeException(
                     "Editing is not allowed for this form");
         }
-        if (LocalDateTime.now().isAfter(existing.getEditableUntil())) {
+        if (Instant.now().isAfter(existing.getEditableUntil())) {
             throw new RuntimeException(
                     "Edit window has closed. Responses could be edited until "
                             + existing.getEditableUntil());
@@ -262,7 +262,7 @@ public class ResponseService {
         }
         //  overwrite response and track edit time
         existing.setResponse(responseMap);
-        existing.setLastEditedAt(LocalDateTime.now());
+        existing.setLastEditedAt(Instant.now());
        /*
         FormResponse saved = repository.save(existing);
         return mapToDTO(saved);*/
@@ -757,25 +757,9 @@ public class ResponseService {
         dto.setSubmittedAt(entity.getSubmittedAt());
         dto.setScore(entity.getScore());
         dto.setEvaluation(entity.getEvaluation());
-       // dto.setEditableUntil(entity.getEditableUntil());
-        //dto.setLastEditedAt(entity.getLastEditedAt());
-        dto.setEditableUntil(
-                entity.getEditableUntil() != null
-                        ? entity.getEditableUntil()
-                        .atOffset(ZoneOffset.UTC)
-                        .toInstant()
-                        .toString()
-                        : null
-        );
+       dto.setEditableUntil(entity.getEditableUntil());
+        dto.setLastEditedAt(entity.getLastEditedAt());
 
-        dto.setLastEditedAt(
-                entity.getLastEditedAt() != null
-                        ? entity.getLastEditedAt()
-                        .atOffset(ZoneOffset.UTC)
-                        .toInstant()
-                        .toString()
-                        : null
-        );
         // return username so frontend knows who submitted
         if (entity.getUser() != null) {
             dto.setUsername(entity.getUser().getUsername());

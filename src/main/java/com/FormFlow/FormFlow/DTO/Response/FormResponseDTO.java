@@ -2,6 +2,7 @@ package com.FormFlow.FormFlow.DTO.Response;
 
 import lombok.Data;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -17,7 +18,7 @@ public class FormResponseDTO {
     private Double score;
     private Map<String, Object> evaluation;
 
-    private String editableUntil;
-    private String lastEditedAt;
+    private Instant editableUntil;
+    private Instant lastEditedAt;
 
 }

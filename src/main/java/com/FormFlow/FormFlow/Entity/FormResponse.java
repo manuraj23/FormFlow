@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -44,8 +45,8 @@ public class FormResponse {
     private Map<String, Object> evaluation;
 
     // when the edit window closes — null means editing not allowed for this form
-    private LocalDateTime editableUntil;
+    private Instant editableUntil;
 
     // track when response was last edited — null means never edited
-    private LocalDateTime lastEditedAt;
+    private Instant lastEditedAt;
 }
