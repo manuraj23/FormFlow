@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -756,8 +757,25 @@ public class ResponseService {
         dto.setSubmittedAt(entity.getSubmittedAt());
         dto.setScore(entity.getScore());
         dto.setEvaluation(entity.getEvaluation());
-        dto.setEditableUntil(entity.getEditableUntil());
-        dto.setLastEditedAt(entity.getLastEditedAt());
+       // dto.setEditableUntil(entity.getEditableUntil());
+        //dto.setLastEditedAt(entity.getLastEditedAt());
+        dto.setEditableUntil(
+                entity.getEditableUntil() != null
+                        ? entity.getEditableUntil()
+                        .atOffset(ZoneOffset.UTC)
+                        .toInstant()
+                        .toString()
+                        : null
+        );
+
+        dto.setLastEditedAt(
+                entity.getLastEditedAt() != null
+                        ? entity.getLastEditedAt()
+                        .atOffset(ZoneOffset.UTC)
+                        .toInstant()
+                        .toString()
+                        : null
+        );
         // return username so frontend knows who submitted
         if (entity.getUser() != null) {
             dto.setUsername(entity.getUser().getUsername());
